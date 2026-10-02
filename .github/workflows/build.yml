@@ -25,13 +25,18 @@ jobs:
           yes | sdkmanager --licenses > /dev/null
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
+      # 增量构建：缓存 Gradle 发行版与全部依赖下载，
+      # 后续构建不再重复下载几百 MB，Chaquopy 打包仍每次执行。
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+
       - name: Build debug APK
         run: |
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
-          curl -sL -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-8.7-bin.zip
-          unzip -q /tmp/gradle.zip -d /tmp
-          /tmp/gradle-8.7/bin/gradle assembleDebug --console=plain
+          gradle assembleDebug --console=plain
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
