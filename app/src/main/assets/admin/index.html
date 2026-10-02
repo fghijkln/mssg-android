@@ -150,10 +150,28 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 <div class="toast" id="toast"></div>
 <div class="loading" id="loading"><div class="spinner"></div><div>处理中…</div></div>
 
+<div class="editor" id="cssEditor">
+  <div class="editor-bar">
+    <button class="btn ghost" onclick="closeCssEditor()">‹ 返回</button>
+    <h2>自定义 CSS</h2>
+    <button class="btn ghost" onclick="clearCss()">恢复默认</button>
+    <button class="btn ghost" onclick="saveCss()">应用</button>
+  </div>
+  <div class="editor-body">
+    <div class="field">
+      <label id="cssHint">在当前主题样式基础上改，点"应用"实时生效</label>
+      <textarea id="f_css" style="min-height:60vh" spellcheck="false"></textarea>
+    </div>
+  </div>
+</div>
+
 <div class="sheet-backdrop" id="themeSheet" onclick="if(event.target===this)closeThemes()">
   <div class="sheet">
     <h3>选择主题</h3>
     <div id="themeList"></div>
+    <button class="theme-opt" onclick="closeThemes();openCssEditor()">
+      <span>✏️</span><span>自定义 CSS<span id="cssBadge"></span><br><small style="color:var(--muted)">随意改样式，实时预览</small></span>
+    </button>
   </div>
 </div>
 
@@ -313,6 +331,10 @@ function openThemes(){
       ${t.id===cur?'<span class="check">✓</span>':""}
     </button>`;
   }).join("");
+  try{
+    const c = JSON.parse(bridge().getCustomCss());
+    $("cssBadge").textContent = c.is_custom ? "（使用中）" : "";
+  }catch(e){}
   $("themeSheet").classList.add("show");
 }
 function closeThemes(){ $("themeSheet").classList.remove("show"); }
@@ -357,6 +379,38 @@ function doSharePage(){
     if(!r.ok){ toast(r.msg); return; }
     bridge().shareFile(r.path, r.name || "page.html", "text/html");
     toast("正在打开分享…");
+  });
+}
+
+/* 自定义 CSS */
+function openCssEditor(){
+  let r;
+  try{ r = JSON.parse(bridge().getCustomCss()); }
+  catch(e){ toast("读取失败："+e); return; }
+  if(!r.ok){ toast(r.msg); return; }
+  $("f_css").value = r.css || "";
+  $("cssHint").textContent = r.is_custom
+    ? "正在覆盖主题样式，点“应用”实时生效"
+    : "以当前主题样式为起点改，点“应用”实时生效";
+  $("cssEditor").classList.add("open");
+}
+function closeCssEditor(){ $("cssEditor").classList.remove("open"); }
+function saveCss(){
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().saveCustomCss($("f_css").value)); }
+    catch(e){ toast("应用失败："+e); return; }
+    toast(r.ok ? ("已应用，" + (r.msg||"")) : r.msg);
+  });
+}
+function clearCss(){
+  if(!confirm("清除自定义 CSS，恢复主题默认样式？")) return;
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().clearCustomCss()); }
+    catch(e){ toast("清除失败："+e); return; }
+    if(r.ok){ toast("已恢复默认"); openCssEditor(); }
+    else toast(r.msg);
   });
 }
 

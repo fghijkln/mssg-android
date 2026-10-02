@@ -140,6 +140,12 @@ def set_theme(site_dir: str, theme: str) -> str:
             return _fail("mssg.toml 里找不到 theme 配置项")
         with open(toml_path, "w", encoding="utf-8") as f:
             f.write(new_text)
+        # 切换主题时清除自定义 CSS，避免旧样式串到新主题上
+        custom = Path(site_dir) / "static" / "style.css"
+        if custom.is_file():
+            custom.unlink()
+            msg = _app(site_dir)._rebuild()
+            return _ok(msg=msg + "（已清除自定义 CSS）", theme=theme)
         msg = _app(site_dir)._rebuild()
         return _ok(msg=msg, theme=theme)
     except Exception:
@@ -187,5 +193,50 @@ def export_page_html(site_dir: str, rel: str) -> str:
         if not html_path.is_file():
             return _fail("页面尚未生成：%s" % url)
         return _ok(path=str(html_path), name=html_path.name)
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def get_custom_css(site_dir: str) -> str:
+    """返回自定义 CSS：有覆盖则返回覆盖内容，否则返回当前主题的 CSS 供改写。"""
+    try:
+        from mssg.site import Site
+        from mssg import themes as _themes
+
+        site = Site(site_dir)
+        override = Path(site_dir) / "static" / "style.css"
+        if override.is_file():
+            return _ok(
+                css=override.read_text(encoding="utf-8"), is_custom=True
+            )
+        theme = site.cfg["site"].get("theme", "company")
+        _, s_dir = _themes.theme_dirs(theme)
+        base = Path(s_dir) / "style.css"
+        css = base.read_text(encoding="utf-8") if base.is_file() else ""
+        return _ok(css=css, is_custom=False, theme=theme)
+    except Exception as e:
+        return _fail("读取失败：%s" % e)
+
+
+def save_custom_css(site_dir: str, css: str) -> str:
+    """保存自定义 CSS（覆盖主题的 style.css），并重建。"""
+    try:
+        override = Path(site_dir) / "static" / "style.css"
+        override.parent.mkdir(parents=True, exist_ok=True)
+        override.write_text(css, encoding="utf-8")
+        msg = _app(site_dir)._rebuild()
+        return _ok(msg=msg)
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def clear_custom_css(site_dir: str) -> str:
+    """删除自定义 CSS 覆盖，恢复主题默认，并重建。"""
+    try:
+        override = Path(site_dir) / "static" / "style.css"
+        if override.is_file():
+            override.unlink()
+        msg = _app(site_dir)._rebuild()
+        return _ok(msg=msg)
     except Exception:
         return _fail(traceback.format_exc(limit=3))

@@ -138,6 +138,33 @@ public class ApiBridge {
         }
     }
 
+    @JavascriptInterface
+    public String getCustomCss() {
+        try {
+            return api().callAttr("get_custom_css", siteDir).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String saveCustomCss(String css) {
+        try {
+            return api().callAttr("save_custom_css", siteDir, css).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String clearCustomCss() {
+        try {
+            return api().callAttr("clear_custom_css", siteDir).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
     /**
      * 把导出的文件存到系统"下载"目录。
      * Android 10+ 走 MediaStore，无需任何权限；更早版本存到应用外部目录。
