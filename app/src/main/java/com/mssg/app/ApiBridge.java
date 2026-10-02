@@ -73,6 +73,33 @@ public class ApiBridge {
         }
     }
 
+    @JavascriptInterface
+    public String listThemes() {
+        try {
+            return api().callAttr("list_themes").toString();
+        } catch (Exception e) {
+            return "{\"ok\":false,\"msg\":\"" + esc(e.toString()) + "\"}";
+        }
+    }
+
+    @JavascriptInterface
+    public String getTheme() {
+        try {
+            return api().callAttr("get_theme", siteDir).toString();
+        } catch (Exception e) {
+            return "{\"ok\":false,\"msg\":\"" + esc(e.toString()) + "\"}";
+        }
+    }
+
+    @JavascriptInterface
+    public String setTheme(String theme) {
+        try {
+            return api().callAttr("set_theme", siteDir, theme).toString();
+        } catch (Exception e) {
+            return "{\"ok\":false,\"msg\":\"" + esc(e.toString()) + "\"}";
+        }
+    }
+
     private static String esc(String s) {
         return s.replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\r", "");

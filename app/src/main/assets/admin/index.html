@@ -75,6 +75,18 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .spinner{width:40px;height:40px;border:4px solid #e5e7eb;border-top-color:var(--primary);border-radius:50%;
   animation:spin 0.8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
+/* 主题选择 */
+.sheet-backdrop{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);display:none;
+  align-items:flex-end;justify-content:center;}
+.sheet-backdrop.show{display:flex;}
+.sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:640px;
+  padding:20px 18px calc(24px + env(safe-area-inset-bottom));}
+.sheet h3{margin:0 0 14px;font-size:17px;}
+.theme-opt{display:flex;align-items:center;gap:12px;width:100%;border:1px solid #e5e7eb;
+  background:#fff;border-radius:12px;padding:14px 16px;font-size:16px;margin-bottom:10px;cursor:pointer;text-align:left;}
+.theme-opt .dot{width:22px;height:22px;border-radius:50%;flex-shrink:0;border:1px solid #d1d5db;}
+.theme-opt.current{border-color:var(--primary);background:#eef2ff;}
+.theme-opt .check{margin-left:auto;color:var(--primary);font-weight:700;}
 </style>
 </head>
 <body>
@@ -82,6 +94,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 <div class="appbar">
   <h1>mssg</h1>
   <div class="actions">
+    <button class="btn ghost" onclick="openThemes()">🎨</button>
     <button class="btn ghost" onclick="doPreview()">预览</button>
     <button class="btn ghost" onclick="doBuild()">构建</button>
   </div>
@@ -134,6 +147,13 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 
 <div class="toast" id="toast"></div>
 <div class="loading" id="loading"><div class="spinner"></div><div>处理中…</div></div>
+
+<div class="sheet-backdrop" id="themeSheet" onclick="if(event.target===this)closeThemes()">
+  <div class="sheet">
+    <h3>选择主题</h3>
+    <div id="themeList"></div>
+  </div>
+</div>
 
 <script>
 "use strict";
@@ -259,6 +279,36 @@ function doPreview(){
     if(!r.ok){ toast(r.msg); return; }
     const dir = bridge().getSiteDir();
     location.href = "file://" + dir + "/public/index.html";
+  });
+}
+
+/* 主题 */
+const THEME_DOTS = {company:"#1d4ed8", minimal:"#9ca3af", novacore:"#0a0f22"};
+function openThemes(){
+  let r;
+  try{ r = JSON.parse(bridge().listThemes()); }
+  catch(e){ toast("读取主题失败："+e); return; }
+  if(!r.ok){ toast(r.msg); return; }
+  let cur = null;
+  try{ cur = JSON.parse(bridge().getTheme()).theme; }catch(e){}
+  $("themeList").innerHTML = (r.themes||[]).map(t=>{
+    const dot = THEME_DOTS[t.id] || "#6b7280";
+    return `<button class="theme-opt${t.id===cur?" current":""}" onclick="pickTheme('${esc(t.id)}')">
+      <span class="dot" style="background:${dot}"></span>
+      <span>${esc(t.name)}</span>
+      ${t.id===cur?'<span class="check">✓</span>':""}
+    </button>`;
+  }).join("");
+  $("themeSheet").classList.add("show");
+}
+function closeThemes(){ $("themeSheet").classList.remove("show"); }
+function pickTheme(id){
+  closeThemes();
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().setTheme(id)); }
+    catch(e){ toast("切换失败："+e); return; }
+    toast(r.ok ? ("已切换，" + (r.msg||"")) : r.msg);
   });
 }
 

@@ -4,6 +4,8 @@
 不再经过 HTTP 服务（localhost 在 WebView 里不可靠）。
 """
 import json
+import os
+import re
 import traceback
 
 
@@ -84,5 +86,59 @@ def delete_page(site_dir: str, rel: str) -> str:
 def build_site(site_dir: str) -> str:
     try:
         return _ok(msg=_app(site_dir)._rebuild())
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+_THEMES_ZH = {
+    "company": "公司站（浅色）",
+    "minimal": "极简风",
+    "novacore": "深色科技",
+}
+
+
+def list_themes() -> str:
+    try:
+        from mssg.site import Site
+
+        themes = Site.available_themes()
+        return _ok(
+            themes=[
+                {"id": t, "name": _THEMES_ZH.get(t, t)} for t in themes
+            ]
+        )
+    except Exception as e:
+        return _fail("读取失败：%s" % e)
+
+
+def get_theme(site_dir: str) -> str:
+    try:
+        from mssg.site import Site
+
+        theme = Site(site_dir).cfg["site"].get("theme", "company")
+        return _ok(theme=theme)
+    except Exception as e:
+        return _fail("读取失败：%s" % e)
+
+
+def set_theme(site_dir: str, theme: str) -> str:
+    try:
+        from mssg.site import Site
+
+        if theme not in Site.available_themes():
+            return _fail("未知主题：%s" % theme)
+        toml_path = os.path.join(site_dir, "mssg.toml")
+        with open(toml_path, encoding="utf-8") as f:
+            text = f.read()
+        new_text, n = re.subn(
+            r'^theme\s*=\s*"[^"]*"', 'theme = "%s"' % theme,
+            text, count=1, flags=re.M,
+        )
+        if n == 0:
+            return _fail("mssg.toml 里找不到 theme 配置项")
+        with open(toml_path, "w", encoding="utf-8") as f:
+            f.write(new_text)
+        msg = _app(site_dir)._rebuild()
+        return _ok(msg=msg, theme=theme)
     except Exception:
         return _fail(traceback.format_exc(limit=3))
