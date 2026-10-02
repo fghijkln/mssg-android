@@ -240,3 +240,115 @@ def clear_custom_css(site_dir: str) -> str:
         return _ok(msg=msg)
     except Exception:
         return _fail(traceback.format_exc(limit=3))
+
+
+# ---------- Cloudflare Pages 一键部署（可选） ----------
+
+def _cf_conf_path(site_dir: str) -> Path:
+    return Path(site_dir).parent / ".mssg_cf.json"
+
+
+def _cf_load(site_dir: str) -> dict:
+    p = _cf_conf_path(site_dir)
+    if p.is_file():
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
+
+
+def _cf_save(site_dir: str, conf: dict):
+    p = _cf_conf_path(site_dir)
+    p.write_text(json.dumps(conf), encoding="utf-8")
+    try:
+        os.chmod(p, 0o600)
+    except Exception:
+        pass
+
+
+def cf_status(site_dir: str) -> str:
+    """是否已连接 Cloudflare。"""
+    try:
+        c = _cf_load(site_dir)
+        return _ok(
+            connected=bool(c.get("token") and c.get("account_id")),
+            account_name=c.get("account_name", ""),
+            project=c.get("project", ""),
+        )
+    except Exception as e:
+        return _fail("读取失败：%s" % e)
+
+
+def cf_connect(site_dir: str, token: str) -> str:
+    """用 API Token 连接：校验并保存账号。"""
+    try:
+        from mssg import cloudflare as cf
+
+        token = (token or "").strip()
+        if not token:
+            return _fail("Token 不能为空")
+        accounts = cf.list_accounts(token)
+        if not accounts:
+            return _fail("该 Token 下没有可用账号")
+        acc = accounts[0]
+        c = _cf_load(site_dir)
+        c.update(
+            token=token, account_id=acc["id"], account_name=acc["name"]
+        )
+        _cf_save(site_dir, c)
+        return _ok(accounts=accounts, account_name=acc["name"])
+    except Exception as e:
+        return _fail(str(e))
+
+
+def cf_set_project(site_dir: str, name: str) -> str:
+    """设置/创建 Pages 项目。"""
+    try:
+        from mssg import cloudflare as cf
+
+        c = _cf_load(site_dir)
+        if not c.get("token"):
+            return _fail("请先连接 Cloudflare")
+        name = cf.sanitize_project_name(name)
+        proj, created = cf.get_or_create_project(
+            c["token"], c["account_id"], name
+        )
+        c["project"] = proj.get("name", name)
+        _cf_save(site_dir, c)
+        return _ok(project=c["project"], created=created,
+                   url="https://%s.pages.dev" % c["project"])
+    except Exception as e:
+        return _fail(str(e))
+
+
+def cf_deploy(site_dir: str) -> str:
+    """构建并一键部署到 Cloudflare Pages。"""
+    try:
+        from mssg import cloudflare as cf
+
+        c = _cf_load(site_dir)
+        if not c.get("token"):
+            return _fail("请先连接 Cloudflare")
+        if not c.get("project"):
+            return _fail("请先设置 Pages 项目")
+        app = _app(site_dir)
+        app._rebuild()
+        public = _output_dir(site_dir)
+        out = cf.deploy_directory(
+            c["token"], c["account_id"], c["project"], public
+        )
+        return _ok(url=out["url"], project_url=out["project_url"])
+    except Exception as e:
+        return _fail(str(e))
+
+
+def cf_disconnect(site_dir: str) -> str:
+    """断开 Cloudflare 连接（删除本地保存的 Token）。"""
+    try:
+        p = _cf_conf_path(site_dir)
+        if p.is_file():
+            p.unlink()
+        return _ok()
+    except Exception as e:
+        return _fail("断开失败：%s" % e)

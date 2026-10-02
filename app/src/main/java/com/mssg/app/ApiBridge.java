@@ -121,6 +121,51 @@ public class ApiBridge {
     }
 
     @JavascriptInterface
+    public String cfStatus() {
+        try {
+            return api().callAttr("cf_status", siteDir).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String cfConnect(String token) {
+        try {
+            return api().callAttr("cf_connect", siteDir, token).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String cfSetProject(String name) {
+        try {
+            return api().callAttr("cf_set_project", siteDir, name).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String cfDeploy() {
+        try {
+            return api().callAttr("cf_deploy", siteDir).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String cfDisconnect() {
+        try {
+            return api().callAttr("cf_disconnect", siteDir).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
     public String exportZip() {
         try {
             return api().callAttr("export_zip", siteDir).toString();

@@ -184,6 +184,16 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     <button class="theme-opt" onclick="doExportZip(false)">
       <span>📤</span><span>分享 ZIP<br><small style="color:var(--muted)">通过微信 / 邮件 / 云盘发送</small></span>
     </button>
+    <button class="theme-opt" onclick="openCf()">
+      <span>☁️</span><span>部署到 Cloudflare Pages<br><small style="color:var(--muted)">连接账号后一键上线（可选）</small></span>
+    </button>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="cfSheet" onclick="if(event.target===this)closeCf()">
+  <div class="sheet">
+    <h3>☁️ Cloudflare Pages</h3>
+    <div id="cfBody"></div>
   </div>
 </div>
 
@@ -368,6 +378,69 @@ function doExportZip(save){
       toast("正在打开分享…");
     }
   });
+}
+/* Cloudflare 一键部署（可选） */
+function openCf(){ closeExport(); renderCf(); $("cfSheet").classList.add("show"); }
+function closeCf(){ $("cfSheet").classList.remove("show"); }
+function cfCall(fn){
+  try{ return JSON.parse(bridge()[fn].apply(bridge(), Array.prototype.slice.call(arguments,1))); }
+  catch(e){ return {ok:false, msg:"调用失败："+e}; }
+}
+function renderCf(){
+  const st = cfCall("cfStatus");
+  const b = $("cfBody");
+  if(!st.ok){ b.innerHTML = "<p>读取状态失败："+st.msg+"</p>"; return; }
+  if(!st.connected){
+    b.innerHTML =
+      '<p style="color:var(--muted);font-size:13px">连接你的 Cloudflare 账号，之后点一下就能把网站部署上线，不用再手动导 ZIP 传文件。</p>'+
+      '<input id="cfToken" type="password" placeholder="粘贴 API Token" style="width:100%;box-sizing:border-box;margin:8px 0;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)">'+
+      '<button class="theme-opt" onclick="doCfConnect()"><span>🔑</span><span>连接</span></button>'+
+      '<p style="color:var(--muted);font-size:12px">去 dash.cloudflare.com → 右上角头像 → 我的个人资料 → API 令牌 → 创建令牌 → 自定义令牌，权限选 <b>Cloudflare Pages / 编辑</b>。Token 只保存在本机。</p>';
+  }else if(!st.project){
+    b.innerHTML =
+      '<p style="font-size:13px">已连接：'+st.account_name+'</p>'+
+      '<input id="cfProject" type="text" placeholder="项目名，如 my-site" style="width:100%;box-sizing:border-box;margin:8px 0;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)">'+
+      '<button class="theme-opt" onclick="doCfSetProject()"><span>🚀</span><span>创建并使用该项目</span></button>'+
+      '<button class="theme-opt" onclick="doCfDisconnect()"><span>🔌</span><span>断开连接</span></button>';
+  }else{
+    b.innerHTML =
+      '<p style="font-size:13px">已连接：'+st.account_name+'<br>项目：<b>'+st.project+'</b><br><small style="color:var(--muted)">https://'+st.project+'.pages.dev</small></p>'+
+      '<button class="theme-opt" onclick="doCfDeploy()"><span>☁️</span><span>一键部署<br><small style="color:var(--muted)">构建并上传，可能需要半分钟</small></span></button>'+
+      '<button class="theme-opt" onclick="doCfDisconnect()"><span>🔌</span><span>断开连接</span></button>';
+  }
+}
+function doCfConnect(){
+  const token = $("cfToken").value.trim();
+  if(!token){ toast("请先粘贴 API Token"); return; }
+  withLoading(()=>{
+    const r = cfCall("cfConnect", token);
+    toast(r.ok ? ("已连接："+r.account_name) : r.msg, 3000);
+    renderCf();
+  });
+}
+function doCfSetProject(){
+  const name = $("cfProject").value.trim() || "mssg-site";
+  withLoading(()=>{
+    const r = cfCall("cfSetProject", name);
+    toast(r.ok ? ("项目就绪："+r.url) : r.msg, 3200);
+    renderCf();
+  });
+}
+function doCfDeploy(){
+  withLoading(()=>{
+    const r = cfCall("cfDeploy");
+    if(!r.ok){ toast(r.msg, 4000); return; }
+    $("cfBody").innerHTML =
+      '<p style="font-size:15px">🎉 部署成功！</p>'+
+      '<p><a href="'+r.project_url+'" target="_blank" style="color:var(--acc)">'+r.project_url+'</a></p>'+
+      '<button class="theme-opt" onclick="closeCf()"><span>✅</span><span>完成</span></button>';
+    toast("已上线", 2600);
+  });
+}
+function doCfDisconnect(){
+  const r = cfCall("cfDisconnect");
+  toast(r.ok ? "已断开" : r.msg);
+  renderCf();
 }
 function doSharePage(){
   const rel = $("f_rel").value.trim();
