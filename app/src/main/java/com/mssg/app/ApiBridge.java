@@ -157,6 +157,15 @@ public class ApiBridge {
     }
 
     @JavascriptInterface
+    public String cfSetAccount(String accountId) {
+        try {
+            return api().callAttr("cf_set_account", siteDir, accountId).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
     public String cfSetProject(String name) {
         try {
             return api().callAttr("cf_set_project", siteDir, name).toString();

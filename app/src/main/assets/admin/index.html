@@ -396,6 +396,13 @@ function renderCf(){
       '<input id="cfToken" type="password" placeholder="粘贴 API Token" style="width:100%;box-sizing:border-box;margin:8px 0;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)">'+
       '<button class="theme-opt" onclick="doCfConnect()"><span>🔑</span><span>连接</span></button>'+
       '<p style="color:var(--muted);font-size:12px">去 dash.cloudflare.com → 右上角头像 → 我的个人资料 → API 令牌 → 创建令牌 → 自定义令牌，权限选 <b>Cloudflare Pages / 编辑</b>。Token 只保存在本机。</p>';
+  }else if(!st.account_id){
+    b.innerHTML =
+      '<p style="font-size:13px">Token 有效，但没能自动读到账号，请手动填 <b>Account ID</b>。</p>'+
+      '<input id="cfAccountId" type="text" placeholder="粘贴 Account ID" style="width:100%;box-sizing:border-box;margin:8px 0;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)">'+
+      '<button class="theme-opt" onclick="doCfSetAccount()"><span>🆔</span><span>保存</span></button>'+
+      '<p style="color:var(--muted);font-size:12px">在浏览器打开 dash.cloudflare.com，地址栏里 <b>dash.cloudflare.com/ 后面那串字符</b>就是 Account ID。</p>'+
+      '<button class="theme-opt" onclick="doCfDisconnect()"><span>🔌</span><span>断开连接</span></button>';
   }else if(!st.project){
     b.innerHTML =
       '<p style="font-size:13px">已连接：'+st.account_name+'</p>'+
@@ -415,6 +422,15 @@ function doCfConnect(){
   withLoading(()=>{
     const r = cfCall("cfConnect", token);
     toast(r.ok ? ("已连接："+r.account_name) : r.msg, 3000);
+    renderCf();
+  });
+}
+function doCfSetAccount(){
+  const id = $("cfAccountId").value.trim();
+  if(!id){ toast("请先粘贴 Account ID"); return; }
+  withLoading(()=>{
+    const r = cfCall("cfSetAccount", id);
+    toast(r.ok ? "账号已设置" : r.msg, 3200);
     renderCf();
   });
 }

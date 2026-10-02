@@ -272,7 +272,8 @@ def cf_status(site_dir: str) -> str:
     try:
         c = _cf_load(site_dir)
         return _ok(
-            connected=bool(c.get("token") and c.get("account_id")),
+            connected=bool(c.get("token")),
+            account_id=c.get("account_id", ""),
             account_name=c.get("account_name", ""),
             project=c.get("project", ""),
         )
@@ -281,25 +282,54 @@ def cf_status(site_dir: str) -> str:
 
 
 def cf_connect(site_dir: str, token: str) -> str:
-    """用 API Token 连接：校验并保存账号。"""
+    """用 API Token 连接：先验活，再尽量自动取账号。
+
+    有些 Token 调 /accounts 返回空列表，此时先保存 Token，
+    让用户手动填 Account ID（cf_set_account）。
+    """
     try:
         from mssg import cloudflare as cf
 
         token = (token or "").strip()
         if not token:
             return _fail("Token 不能为空")
+        info = cf.verify_token(token)
+        if info.get("status") != "active":
+            return _fail("Token 状态异常：%s" % info.get("status"))
         accounts = cf.list_accounts(token)
-        if not accounts:
-            return _fail("该 Token 下没有可用账号")
-        acc = accounts[0]
         c = _cf_load(site_dir)
-        c.update(
-            token=token, account_id=acc["id"], account_name=acc["name"]
-        )
+        c.update(token=token, account_id="", account_name="")
+        if accounts:
+            acc = accounts[0]
+            c.update(account_id=acc["id"], account_name=acc["name"])
         _cf_save(site_dir, c)
-        return _ok(accounts=accounts, account_name=acc["name"])
+        return _ok(
+            accounts=accounts,
+            need_account_id=not accounts,
+            account_name=c.get("account_name", ""),
+        )
     except Exception as e:
         return _fail(str(e))
+
+
+def cf_set_account(site_dir: str, account_id: str) -> str:
+    """手动设置 Account ID（/accounts 返回空时用）。"""
+    try:
+        from mssg import cloudflare as cf
+
+        c = _cf_load(site_dir)
+        if not c.get("token"):
+            return _fail("请先粘贴 API Token 并连接")
+        account_id = (account_id or "").strip()
+        if not account_id:
+            return _fail("Account ID 不能为空")
+        # 验证 Token 对该账号可用：列出 Pages 项目
+        cf.list_projects(c["token"], account_id)
+        c.update(account_id=account_id)
+        _cf_save(site_dir, c)
+        return _ok(account_id=account_id)
+    except Exception as e:
+        return _fail("Account ID 无效或 Token 无权访问：%s" % e)
 
 
 def cf_set_project(site_dir: str, name: str) -> str:
