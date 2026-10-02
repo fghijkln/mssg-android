@@ -2,8 +2,6 @@ package com.mssg.app;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.webkit.WebResourceError;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -13,9 +11,13 @@ import com.chaquo.python.android.AndroidPlatform;
 
 import java.io.File;
 
+/**
+ * mssg 手机版：WebView 加载本地 file:// 页面，
+ * JS 经 ApiBridge 直调 Python 引擎（无 localhost HTTP 服务）。
+ */
 public class MainActivity extends Activity {
 
-    private static final int MAX_RETRIES = 8;
+    private WebView wv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,33 +29,28 @@ public class MainActivity extends Activity {
         }
         Python py = Python.getInstance();
 
+        // 首次运行建站
         File siteDir = new File(getFilesDir(), "site");
         py.getModule("mssg_android")
                 .callAttr("ensure_site", siteDir.getAbsolutePath());
-        // start_admin 内部会等端口就绪才返回 token
-        final String token = py.getModule("mssg_android")
-                .callAttr("start_admin", siteDir.getAbsolutePath(), 8902)
-                .toString();
-        final String url = "http://127.0.0.1:8902/?token=" + token;
 
-        final WebView wv = findViewById(R.id.webview);
+        wv = findViewById(R.id.webview);
         WebSettings s = wv.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
-        s.setCacheMode(WebSettings.LOAD_DEFAULT);
-        wv.setWebViewClient(new WebViewClient() {
-            private int retries = 0;
+        s.setAllowFileAccess(true);
+        wv.addJavascriptInterface(
+                new ApiBridge(siteDir.getAbsolutePath()), "MssgApi");
+        wv.setWebViewClient(new WebViewClient());
+        wv.loadUrl("file:///android_asset/admin/index.html");
+    }
 
-            @Override
-            public void onReceivedError(WebView view, WebResourceRequest request,
-                                        WebResourceError error) {
-                // 主页面加载失败时延迟重试，兜底一切瞬时问题
-                if (request.isForMainFrame() && retries < MAX_RETRIES) {
-                    retries++;
-                    view.postDelayed(() -> view.loadUrl(url), 1200);
-                }
-            }
-        });
-        wv.loadUrl(url);
+    @Override
+    public void onBackPressed() {
+        if (wv != null && wv.canGoBack()) {
+            wv.goBack();
+        } else {
+            super.onBackPressed();
+        }
     }
 }

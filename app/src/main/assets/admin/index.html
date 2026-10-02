@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>mssg</title>
+<style>
+:root{
+  --primary:#4f46e5; --primary-dark:#4338ca;
+  --bg:#f4f5f7; --card:#ffffff; --text:#1f2937; --muted:#6b7280;
+  --danger:#dc2626; --ok:#059669;
+  --radius:14px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:16px; min-height:100vh;}
+/* 顶栏 */
+.appbar{position:sticky;top:0;z-index:10;background:var(--primary);color:#fff;
+  padding:14px 16px calc(14px + env(safe-area-inset-top)) ;
+  padding-top:calc(14px + env(safe-area-inset-top));
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.appbar h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.5px;}
+.appbar .actions{display:flex;gap:8px;}
+.btn{border:none;border-radius:10px;padding:10px 16px;font-size:15px;font-weight:600;
+  cursor:pointer;background:var(--primary);color:#fff;}
+.btn:active{opacity:.85;}
+.btn.ghost{background:rgba(255,255,255,.18);color:#fff;padding:8px 14px;font-size:14px;}
+.btn.secondary{background:#e5e7eb;color:var(--text);}
+.btn.danger-btn{background:#fee2e2;color:var(--danger);}
+.btn.block{width:100%;padding:14px;font-size:16px;}
+/* 列表 */
+.list{padding:16px 14px 96px;max-width:640px;margin:0 auto;}
+.card{background:var(--card);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;
+  box-shadow:0 1px 3px rgba(0,0,0,.08);display:flex;align-items:center;gap:10px;}
+.card .info{flex:1;min-width:0;}
+.card .title{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card .meta{color:var(--muted);font-size:13px;margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.badge{font-size:12px;background:#eef2ff;color:var(--primary);border-radius:6px;padding:2px 8px;}
+.badge.draft{background:#fef3c7;color:#b45309;}
+.icon-btn{border:none;background:#f3f4f6;border-radius:10px;width:44px;height:44px;font-size:18px;cursor:pointer;flex-shrink:0;}
+.icon-btn.danger{background:#fee2e2;}
+.empty{text-align:center;color:var(--muted);padding:60px 20px;line-height:1.8;}
+/* FAB */
+.fab{position:fixed;right:20px;bottom:calc(24px + env(safe-area-inset-bottom));z-index:10;
+  width:60px;height:60px;border-radius:50%;border:none;background:var(--primary);color:#fff;
+  font-size:30px;line-height:1;box-shadow:0 4px 14px rgba(79,70,229,.4);cursor:pointer;}
+.fab:active{transform:scale(.94);}
+/* 编辑器 */
+.editor{position:fixed;inset:0;z-index:20;background:var(--bg);display:none;flex-direction:column;}
+.editor.open{display:flex;}
+.editor-bar{display:flex;align-items:center;gap:10px;background:var(--primary);color:#fff;
+  padding:12px 12px;padding-top:calc(12px + env(safe-area-inset-top));}
+.editor-bar h2{margin:0;font-size:17px;flex:1;}
+.editor-bar .btn.ghost{padding:8px 14px;}
+.editor-body{flex:1;overflow-y:auto;padding:16px 14px;max-width:640px;width:100%;margin:0 auto;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px;}
+.field input[type=text],.field input[type=date],.field textarea{
+  width:100%;border:1px solid #d1d5db;border-radius:10px;padding:12px;font-size:16px;background:#fff;}
+.field textarea{min-height:300px;font-family:ui-monospace,Menlo,monospace;line-height:1.6;resize:vertical;}
+.row2{display:flex;gap:12px;}
+.row2 .field{flex:1;}
+.check{display:flex;align-items:center;gap:10px;font-size:15px;padding:4px 0;}
+.check input{width:22px;height:22px;accent-color:var(--primary);}
+/* toast + loading */
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+  background:#1f2937;color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;max-width:86vw;
+  opacity:0;transition:all .25s;z-index:50;pointer-events:none;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.loading{position:fixed;inset:0;z-index:40;background:rgba(255,255,255,.7);display:none;
+  align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--muted);}
+.loading.show{display:flex;}
+.spinner{width:40px;height:40px;border:4px solid #e5e7eb;border-top-color:var(--primary);border-radius:50%;
+  animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <h1>mssg</h1>
+  <div class="actions">
+    <button class="btn ghost" onclick="doPreview()">预览</button>
+    <button class="btn ghost" onclick="doBuild()">构建</button>
+  </div>
+</div>
+
+<div class="list" id="list"></div>
+
+<button class="fab" onclick="openEditor()" aria-label="新建">＋</button>
+
+<div class="editor" id="editor">
+  <div class="editor-bar">
+    <button class="btn ghost" onclick="closeEditor()">‹ 返回</button>
+    <h2 id="editorTitle">新建文章</h2>
+    <button class="btn ghost" onclick="doSave()">保存</button>
+  </div>
+  <div class="editor-body">
+    <div class="field">
+      <label>标题</label>
+      <input type="text" id="f_title" placeholder="文章标题">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>文件名（content/ 下相对路径）</label>
+        <input type="text" id="f_rel" placeholder="post/hello.md">
+      </div>
+      <div class="field">
+        <label>日期</label>
+        <input type="date" id="f_date">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>标签（逗号分隔）</label>
+        <input type="text" id="f_tags" placeholder="生活, 随笔">
+      </div>
+      <div class="field">
+        <label>分类（逗号分隔）</label>
+        <input type="text" id="f_categories" placeholder="">
+      </div>
+    </div>
+    <div class="field">
+      <label class="check"><input type="checkbox" id="f_draft"> 草稿（不发布）</label>
+    </div>
+    <div class="field">
+      <label>正文（Markdown）</label>
+      <textarea id="f_body" placeholder="# 标题&#10;&#10;正文…"></textarea>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="loading" id="loading"><div class="spinner"></div><div>处理中…</div></div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const bridge = () => window.MssgApi;
+let editingRel = null;
+
+function toast(msg, ms=2600){
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove("show"), ms);
+}
+function loading(show){ $("loading").classList.toggle("show", !!show); }
+/* 让出一次绘制机会，避免同步桥调用卡住时 loading 画不出来 */
+function withLoading(fn){
+  loading(true);
+  setTimeout(()=>{ try{ fn(); } finally{ loading(false); } }, 60);
+}
+function esc(s){
+  return String(s==null?"":s).replace(/[&<>"']/g,
+    c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function refresh(){
+  let r;
+  try{ r = JSON.parse(bridge().listPages()); }
+  catch(e){ toast("引擎未就绪："+e); return; }
+  if(!r.ok){ toast(r.msg); return; }
+  const pages = r.pages || [];
+  const el = $("list");
+  if(!pages.length){
+    el.innerHTML = '<div class="empty">还没有文章<br>点右下角 ＋ 写第一篇吧</div>';
+    return;
+  }
+  el.innerHTML = pages.map(p=>{
+    const badges = `<span class="badge">${esc(p.lang||"")}</span>` +
+      (p.draft ? ' <span class="badge draft">草稿</span>' : '');
+    return `<div class="card" onclick="openEditor('${esc(p.rel)}')">
+      <div class="info">
+        <div class="title">${esc(p.title)}</div>
+        <div class="meta"><span>${esc(p.date||"")}</span>${badges}</div>
+      </div>
+      <button class="icon-btn danger" onclick="event.stopPropagation();doDelete('${esc(p.rel)}','${esc(p.title)}')">🗑</button>
+    </div>`;
+  }).join("");
+}
+
+function openEditor(rel){
+  editingRel = rel || null;
+  $("editorTitle").textContent = rel ? "编辑文章" : "新建文章";
+  if(rel){
+    let r;
+    try{ r = JSON.parse(bridge().getPage(rel)); }
+    catch(e){ toast("读取失败："+e); return; }
+    if(!r.ok){ toast(r.msg); return; }
+    const m = r.meta || {};
+    $("f_rel").value = rel;
+    $("f_rel").disabled = true;
+    $("f_title").value = m.title || "";
+    $("f_date").value = m.date || "";
+    $("f_tags").value = (m.tags||[]).join(", ");
+    $("f_categories").value = (m.categories||[]).join(", ");
+    $("f_draft").checked = !!m.draft;
+    $("f_body").value = r.body || "";
+  }else{
+    $("f_rel").value = "post/";
+    $("f_rel").disabled = false;
+    $("f_title").value = "";
+    $("f_date").value = new Date().toISOString().slice(0,10);
+    $("f_tags").value = "";
+    $("f_categories").value = "";
+    $("f_draft").checked = false;
+    $("f_body").value = "";
+  }
+  $("editor").classList.add("open");
+}
+function closeEditor(){ $("editor").classList.remove("open"); }
+
+function doSave(){
+  const rel = $("f_rel").value.trim();
+  const title = $("f_title").value.trim();
+  if(!rel || !title){ toast("标题和文件名不能为空"); return; }
+  withLoading(()=>{
+    let r;
+    try{
+      r = JSON.parse(bridge().savePage(
+        rel, title, $("f_date").value.trim(),
+        $("f_tags").value, $("f_categories").value,
+        $("f_draft").checked, $("f_body").value));
+    }catch(e){ toast("保存失败："+e); return; }
+    toast(r.ok ? ("已保存，" + (r.msg||"")) : r.msg);
+    if(r.ok){ closeEditor(); refresh(); }
+  });
+}
+
+function doDelete(rel, title){
+  if(!confirm("删除「"+title+"」？")) return;
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().deletePage(rel)); }
+    catch(e){ toast("删除失败："+e); return; }
+    toast(r.ok ? ("已删除，" + (r.msg||"")) : r.msg);
+    if(r.ok) refresh();
+  });
+}
+
+function doBuild(){
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().buildSite()); }
+    catch(e){ toast("构建失败："+e); return; }
+    toast(r.ok ? r.msg : r.msg);
+  });
+}
+
+function doPreview(){
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().buildSite()); }
+    catch(e){ toast("构建失败："+e); return; }
+    if(!r.ok){ toast(r.msg); return; }
+    const dir = bridge().getSiteDir();
+    location.href = "file://" + dir + "/public/index.html";
+  });
+}
+
+document.addEventListener("DOMContentLoaded", refresh);
+</script>
+</body>
+</html>
