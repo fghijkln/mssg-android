@@ -352,6 +352,38 @@ def cf_set_project(site_dir: str, name: str) -> str:
         return _fail(str(e))
 
 
+def cf_projects(site_dir: str) -> str:
+    """列出账号下的 Pages 项目，每个附带最新一次部署状态。"""
+    try:
+        from mssg import cloudflare as cf
+
+        c = _cf_load(site_dir)
+        if not c.get("token") or not c.get("account_id"):
+            return _fail("请先连接 Cloudflare")
+        projs = cf.list_projects(c["token"], c["account_id"])
+        out = []
+        for pr in projs:
+            name = pr.get("name", "")
+            latest = None
+            try:
+                deps = cf.list_deployments(
+                    c["token"], c["account_id"], name, per_page=1
+                )
+                latest = deps[0] if deps else None
+            except Exception:
+                latest = None
+            out.append(
+                {
+                    "name": name,
+                    "url": "https://%s.pages.dev" % name,
+                    "latest": latest,
+                }
+            )
+        return _ok(projects=out, current=c.get("project", ""))
+    except Exception as e:
+        return _fail(str(e))
+
+
 def cf_deploy(site_dir: str) -> str:
     """构建并一键部署到 Cloudflare Pages。"""
     try:

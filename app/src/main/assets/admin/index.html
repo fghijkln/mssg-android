@@ -380,7 +380,8 @@ function doExportZip(save){
   });
 }
 /* Cloudflare 一键部署（可选） */
-function openCf(){ closeExport(); renderCf(); $("cfSheet").classList.add("show"); }
+var cfView = "deploy";
+function openCf(){ closeExport(); cfView = "deploy"; renderCf(); $("cfSheet").classList.add("show"); }
 function closeCf(){ $("cfSheet").classList.remove("show"); }
 function cfCall(fn){
   try{ return JSON.parse(bridge()[fn].apply(bridge(), Array.prototype.slice.call(arguments,1))); }
@@ -403,18 +404,59 @@ function renderCf(){
       '<button class="theme-opt" onclick="doCfSetAccount()"><span>🆔</span><span>保存</span></button>'+
       '<p style="color:var(--muted);font-size:12px">在浏览器打开 dash.cloudflare.com，地址栏里 <b>dash.cloudflare.com/ 后面那串字符</b>就是 Account ID。</p>'+
       '<button class="theme-opt" onclick="doCfDisconnect()"><span>🔌</span><span>断开连接</span></button>';
-  }else if(!st.project){
-    b.innerHTML =
-      '<p style="font-size:13px">已连接：'+st.account_name+'</p>'+
-      '<input id="cfProject" type="text" placeholder="项目名，如 my-site" style="width:100%;box-sizing:border-box;margin:8px 0;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)">'+
-      '<button class="theme-opt" onclick="doCfSetProject()"><span>🚀</span><span>创建并使用该项目</span></button>'+
-      '<button class="theme-opt" onclick="doCfDisconnect()"><span>🔌</span><span>断开连接</span></button>';
+  }else if(cfView==="projects" || !st.project){
+    renderCfProjects(st);
   }else{
     b.innerHTML =
       '<p style="font-size:13px">已连接：'+st.account_name+'<br>项目：<b>'+st.project+'</b><br><small style="color:var(--muted)">https://'+st.project+'.pages.dev</small></p>'+
       '<button class="theme-opt" onclick="doCfDeploy()"><span>☁️</span><span>一键部署<br><small style="color:var(--muted)">构建并上传，可能需要半分钟</small></span></button>'+
+      '<button class="theme-opt" onclick="cfShowProjects()"><span>🔀</span><span>切换项目</span></button>'+
       '<button class="theme-opt" onclick="doCfDisconnect()"><span>🔌</span><span>断开连接</span></button>';
   }
+}
+function cfShowProjects(){ cfView = "projects"; renderCf(); }
+function cfBackToDeploy(){ cfView = "deploy"; renderCf(); }
+function cfEsc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function cfStatusBadge(latest){
+  if(!latest) return "⚪ 未部署";
+  const d = (latest.created_on||"").slice(0,10);
+  const when = d ? " "+d : "";
+  if(latest.status==="success") return "✅ 已上线"+when;
+  if(latest.status==="failure") return "❌ 部署失败"+when;
+  return "🔨 "+cfEsc(latest.stage||"部署中")+when;
+}
+function renderCfProjects(st){
+  const b = $("cfBody");
+  b.innerHTML =
+    '<p style="font-size:13px">选择要部署的 Pages 项目</p>'+
+    '<div id="cfProjList"><p style="color:var(--muted);font-size:13px">加载中…</p></div>'+
+    '<input id="cfProject" type="text" placeholder="新项目名，如 my-site" style="width:100%;box-sizing:border-box;margin:8px 0;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)">'+
+    '<button class="theme-opt" onclick="doCfSetProject()"><span>🚀</span><span>创建并使用该项目</span></button>'+
+    (st.project ? '<button class="theme-opt" onclick="cfBackToDeploy()"><span>↩️</span><span>返回</span></button>' : "")+
+    '<button class="theme-opt" onclick="doCfDisconnect()"><span>🔌</span><span>断开连接</span></button>';
+  withLoading(()=>{
+    const r = cfCall("cfProjects");
+    const box = $("cfProjList");
+    if(!box) return;
+    if(!r.ok){ box.innerHTML = "<p style='font-size:13px'>加载失败："+cfEsc(r.msg)+"</p>"; return; }
+    const list = r.projects || [];
+    if(!list.length){ box.innerHTML = '<p style="color:var(--muted);font-size:13px">还没有项目，在下面创建一个。</p>'; return; }
+    box.innerHTML = list.map(p=>{
+      const cur = (p.name===r.current) ? ' <small style="color:var(--acc)">● 当前</small>' : "";
+      return '<button class="theme-opt" onclick="doCfUseProject(\''+p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'")+'\')">'+
+        '<span>📄</span><span style="text-align:left;flex:1">'+cfEsc(p.name)+cur+
+        '<br><small style="color:var(--muted)">'+cfEsc(p.url)+' · '+cfStatusBadge(p.latest)+'</small></span></button>';
+    }).join("");
+  });
+}
+function doCfUseProject(name){
+  withLoading(()=>{
+    const r = cfCall("cfSetProject", name);
+    if(!r.ok){ toast(r.msg, 3200); return; }
+    cfView = "deploy";
+    toast("已切换到项目："+name, 2200);
+    renderCf();
+  });
 }
 function doCfConnect(){
   const token = $("cfToken").value.trim();
@@ -438,7 +480,9 @@ function doCfSetProject(){
   const name = $("cfProject").value.trim() || "mssg-site";
   withLoading(()=>{
     const r = cfCall("cfSetProject", name);
-    toast(r.ok ? ("项目就绪："+r.url) : r.msg, 3200);
+    if(!r.ok){ toast(r.msg, 3200); return; }
+    cfView = "deploy";
+    toast("项目就绪："+r.url, 3200);
     renderCf();
   });
 }
