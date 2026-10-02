@@ -1,0 +1,285 @@
+"""mssg 命令行入口：new / build / serve / clean。"""
+
+from __future__ import annotations
+
+import argparse
+import functools
+import http.server
+import os
+import re
+import shutil
+import threading
+import time
+from pathlib import Path
+
+from .site import Site, new_site
+
+
+def _cmd_new(args) -> int:  # args.target 即站点目录名
+    try:
+        root = new_site(args.target, theme=getattr(args, "theme", "company"))
+    except (OSError, ValueError) as e:
+        print("错误：%s" % e)
+        return 1
+    print("已创建站点：%s" % root)
+    print("  cd %s && mssg build && mssg serve" % root)
+    return 0
+
+
+def _cmd_build(args) -> int:
+    try:
+        site = Site(".", config=args.config)
+        result = site.build(force=args.force, include_drafts=args.drafts)
+    except Exception as e:
+        print("构建失败：%s" % e)
+        return 1
+    b = site.cfg["build"]
+    print(
+        "构建完成：%d 个页面，输出到 %s/%s%s"
+        % (
+            result["pages"],
+            ".",
+            b["output_dir"],
+            "（有更新）" if result["rebuilt"] else "（无变化，增量跳过）",
+        )
+    )
+    return 0
+
+
+def _snapshot(paths: list) -> dict:
+    """对监听路径做 (mtime, size) 快照。"""
+    snap = {}
+    for base in paths:
+        if os.path.isdir(base):
+            for dp, _, fns in os.walk(base):
+                for fn in fns:
+                    p = os.path.join(dp, fn)
+                    try:
+                        st = os.stat(p)
+                    except OSError:
+                        continue
+                    snap[p] = (st.st_mtime, st.st_size)
+        elif os.path.isfile(base):
+            try:
+                st = os.stat(base)
+            except OSError:
+                continue
+            snap[base] = (st.st_mtime, st.st_size)
+    return snap
+
+
+def _watched_paths(site: Site, args) -> list:
+    """按当前配置计算监听路径（mssg.toml 改了目录配置也能跟上）。"""
+    b = Site(str(site.root), config=args.config).cfg["build"]
+    return [
+        os.path.join(str(site.root), b["content_dir"]),
+        os.path.join(str(site.root), b["template_dir"]),
+        os.path.join(str(site.root), b["static_dir"]),
+        os.path.join(str(site.root), args.config),
+    ]
+
+
+def _watch_and_rebuild(site: Site, args, stop_event: threading.Event) -> None:
+    """轮询监听内容/模板/静态资源/配置变化，变化时自动重建。"""
+    last = _snapshot(_watched_paths(site, args))
+    while not stop_event.wait(0.5):
+        cur = _snapshot(_watched_paths(site, args))
+        if cur == last:
+            continue
+        last = cur
+        now = time.strftime("%H:%M:%S")
+        try:
+            result = site.build(include_drafts=args.drafts)
+            print(
+                "[%s] 检测到变化，重建完成：%d 个页面" % (now, result["pages"]),
+                flush=True,
+            )
+        except Exception as e:  # noqa: BLE001
+            # 构建失败（如模板语法错误）不退出，继续监听等用户修复
+            print("[%s] 构建失败：%s（继续监听）" % (now, e), flush=True)
+
+
+def _cmd_new_dispatch(args) -> int:
+    """mssg new 分发：new <name> 建站；new post <slug> 新建文章。"""
+    if args.target == "post":
+        if not args.slug:
+            print("错误：用法：mssg new post <slug> [-t 标题]")
+            return 1
+        return _cmd_post(args)
+    return _cmd_new(args)
+
+
+def _cmd_post(args) -> int:
+    """在当前站点新建一篇文章 content/<slug>.md。"""
+    import tomllib
+
+    cfg_path = Path(args.config)
+    content_dir = "content"
+    if cfg_path.is_file():
+        try:
+            with open(cfg_path, "rb") as f:
+                content_dir = (
+                    tomllib.load(f).get("build", {}).get("content_dir", "content")
+                )
+        except Exception as e:  # noqa: BLE001
+            print("错误：配置文件解析失败：%s" % e)
+            return 1
+    slug = re.sub(r"[^\w\-]", "", args.slug.replace(" ", "-")).strip("-") or "post"
+    dest = Path(content_dir) / (slug + ".md")
+    if dest.exists():
+        print("错误：文章已存在：%s" % dest)
+        return 1
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(
+        "---\ntitle: %s\ndate: %s\ntags: []\n---\n\n# %s\n\n正文……\n"
+        % (args.title or slug, time.strftime("%Y-%m-%d"), args.title or slug),
+        encoding="utf-8",
+    )
+    print("已创建：%s" % dest)
+    return 0
+
+
+def _cmd_clean(args) -> int:
+    try:
+        site = Site(".", config=args.config)
+    except Exception as e:
+        print("错误：%s" % e)
+        return 1
+    out = Path(site.cfg["build"]["output_dir"])
+    try:
+        resolved = out.resolve()
+        root_resolved = Path(".").resolve()
+    except OSError as e:
+        print("错误：%s" % e)
+        return 1
+    if resolved == root_resolved:
+        print("错误：拒绝清空站点根目录（output_dir 不能指向站点根）")
+        return 1
+    shutil.rmtree(resolved, ignore_errors=True)
+    print("已清空输出目录：%s" % out)
+    return 0
+
+
+def _cmd_admin(args) -> int:
+    from .admin import run as admin_run
+
+    try:
+        admin_run(
+            ".",
+            port=args.port,
+            token=getattr(args, "token", "") or None,
+            no_auth=getattr(args, "no_auth", False),
+        )
+    except OSError as e:
+        print("错误：无法启动管理后台：%s" % e)
+        return 1
+    return 0
+
+
+def _cmd_serve(args) -> int:
+    try:
+        site = Site(".", config=args.config)
+        site.build(include_drafts=args.drafts)
+    except Exception as e:
+        print("构建失败：%s" % e)
+        return 1
+    output_dir = os.path.join(".", site.cfg["build"]["output_dir"])
+    handler = functools.partial(
+        http.server.SimpleHTTPRequestHandler, directory=output_dir
+    )
+    try:
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", args.port), handler)
+    except OSError as e:
+        print("错误：无法监听端口 %d（%s）" % (args.port, e))
+        return 1
+    print("本地预览：http://127.0.0.1:%d/ （Ctrl-C 退出）" % args.port)
+    stop_event = threading.Event()
+    watcher = None
+    if not args.no_watch:
+        print("正在监听文件变化，自动重建…")
+        watcher = threading.Thread(
+            target=_watch_and_rebuild, args=(site, args, stop_event), daemon=True
+        )
+        watcher.start()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        stop_event.set()
+    return 0
+
+
+def main() -> int:
+    from . import __version__
+
+    parser = argparse.ArgumentParser(
+        prog="mssg", description="静态站点生成器（Python-Markdown + Jinja2）"
+    )
+    parser.add_argument(
+        "-V", "--version", action="version", version="mssg %s" % __version__
+    )
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    p_new = sub.add_parser("new", help="新建站点脚手架；mssg new post 新建文章")
+    p_new.add_argument("target", help="站点目录名，或 post（新建文章）")
+    p_new.add_argument("slug", nargs="?", help="（new post 时）文章文件名（不含 .md）")
+    p_new.add_argument("-t", "--title", default="", help="（new post 时）文章标题（默认用 slug）")
+    p_new.add_argument(
+        "-c", "--config", default="mssg.toml", help="配置文件路径（默认 mssg.toml）"
+    )
+    p_new.add_argument(
+        "--theme",
+        default="company",
+        help="建站主题（默认 company，可用：%s）" % ", ".join(Site.available_themes()),
+    )
+    p_new.set_defaults(func=_cmd_new_dispatch)
+
+    p_build = sub.add_parser("build", help="构建站点")
+    p_build.add_argument(
+        "-c", "--config", default="mssg.toml", help="配置文件路径（默认 mssg.toml）"
+    )
+    p_build.add_argument("--force", action="store_true", help="强制全量重建")
+    p_build.add_argument("--drafts", action="store_true", help="包含草稿（draft: true）")
+    p_build.set_defaults(func=_cmd_build)
+
+    p_serve = sub.add_parser("serve", help="构建并本地预览")
+    p_serve.add_argument(
+        "-c", "--config", default="mssg.toml", help="配置文件路径（默认 mssg.toml）"
+    )
+    p_serve.add_argument("--port", type=int, default=8000, help="监听端口（默认 8000）")
+    p_serve.add_argument("--drafts", action="store_true", help="包含草稿（draft: true）")
+    p_serve.add_argument("--no-watch", action="store_true", help="关闭文件监听自动重建")
+    p_serve.set_defaults(func=_cmd_serve)
+
+    p_clean = sub.add_parser("clean", help="清空构建输出目录")
+    p_clean.add_argument(
+        "-c", "--config", default="mssg.toml", help="配置文件路径（默认 mssg.toml）"
+    )
+    p_clean.set_defaults(func=_cmd_clean)
+
+    p_post = sub.add_parser("post", help="新建文章")
+    p_post.add_argument("slug", help="文章文件名（不含 .md）")
+    p_post.add_argument("-t", "--title", default="", help="文章标题（默认用 slug）")
+    p_post.add_argument(
+        "-c", "--config", default="mssg.toml", help="配置文件路径（默认 mssg.toml）"
+    )
+    p_post.set_defaults(func=_cmd_post)
+
+    p_admin = sub.add_parser("admin", help="本地内容管理后台（仅 127.0.0.1）")
+    p_admin.add_argument(
+        "-c", "--config", default="mssg.toml", help="配置文件路径（默认 mssg.toml）"
+    )
+    p_admin.add_argument("--port", type=int, default=8902, help="监听端口（默认 8902）")
+    p_admin.add_argument("--token", default="", help="固定鉴权 token（默认每次随机生成）")
+    p_admin.add_argument(
+        "--no-auth", action="store_true", help="关闭 token 鉴权（仅自己电脑上用）"
+    )
+    p_admin.set_defaults(func=_cmd_admin)
+
+    args = parser.parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
