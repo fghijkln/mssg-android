@@ -352,3 +352,35 @@ def cf_disconnect(site_dir: str) -> str:
         return _ok()
     except Exception as e:
         return _fail("断开失败：%s" % e)
+
+
+# ---------- WebView 网络通道（Cloudflare 备用传输） ----------
+
+def cf_enable_webview_transport(bridge):
+    """Java 在启动时调用：把 WebView 通道注册为 cloudflare 备用传输。
+
+    系统 DNS/socket 全坏的手机上，部署请求经 WebView（Chromium 网络栈）发出。
+    注册失败不影响启动（只是少一条兜底）。
+    """
+    try:
+        from mssg import cloudflare as cf
+
+        def _wv_fetch(method, url, headers, body, timeout):
+            import base64
+            import json as _json
+
+            b64 = base64.b64encode(body).decode("ascii") if body else ""
+            raw = str(
+                bridge.cfFetchSync(
+                    method, url, _json.dumps(headers or {}), b64, int(timeout)
+                )
+            )
+            res = _json.loads(raw)
+            if "error" in res:
+                raise OSError(res["error"])
+            return int(res.get("status", 0)), str(res.get("body", "")).encode("utf-8")
+
+        cf.set_transport(_wv_fetch)
+        return _ok()
+    except Exception as e:
+        return _fail("注册 WebView 通道失败：%s" % e)

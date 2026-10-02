@@ -39,8 +39,14 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setAllowFileAccess(true);
-        wv.addJavascriptInterface(
-                new ApiBridge(this, siteDir.getAbsolutePath()), "MssgApi");
+        // 允许本地页面跨域访问 API（Cloudflare 备用网络通道用）
+        s.setAllowUniversalAccessFromFileURLs(true);
+        ApiBridge bridge = new ApiBridge(this, wv, siteDir.getAbsolutePath());
+        wv.addJavascriptInterface(bridge, "MssgApi");
+        // 注册 WebView 网络通道为 Cloudflare 备用传输
+        try {
+            py.getModule("mssg_api").callAttr("cf_enable_webview_transport", bridge);
+        } catch (Exception ignored) {}
         wv.setWebViewClient(new WebViewClient());
         wv.loadUrl("file:///android_asset/admin/index.html");
     }

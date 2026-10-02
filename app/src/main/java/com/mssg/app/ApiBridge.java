@@ -7,8 +7,14 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Base64;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebView;
 import android.widget.Toast;
+
+import org.json.JSONObject;
 
 import com.chaquo.python.Python;
 
@@ -25,12 +31,24 @@ import java.io.OutputStream;
  * 需要 UI 的操作（分享/Toast）切回主线程。
  */
 public class ApiBridge {
+    /** 供 Python（Chaquopy）回调拿 WebView 通道 */
+    public static ApiBridge instance;
+
     private final Activity activity;
+    private final WebView wv;
     private final String siteDir;
 
-    public ApiBridge(Activity activity, String siteDir) {
+    // WebView 网络通道：reqId -> 数据
+    private final java.util.Map<String, byte[]> cfBodies = new java.util.HashMap<>();
+    private final java.util.Map<String, java.util.concurrent.CountDownLatch> cfLatches =
+            new java.util.HashMap<>();
+    private final java.util.Map<String, String> cfResults = new java.util.HashMap<>();
+
+    public ApiBridge(Activity activity, WebView wv, String siteDir) {
         this.activity = activity;
+        this.wv = wv;
         this.siteDir = siteDir;
+        instance = this;
     }
 
     private com.chaquo.python.PyObject api() {
@@ -306,5 +324,92 @@ public class ApiBridge {
     private static String esc(String s) {
         return s.replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\r", "");
+    }
+
+    // ---------- WebView 网络通道（供 Python 备用传输） ----------
+
+    /**
+     * 经 WebView（Chromium 网络栈）发一次 HTTPS 请求，供 Python 的
+     * cloudflare 备用传输调用。运行在 Chaquopy 后台线程。
+     * 返回 JSON：{"status":200,"body":"..."} 或 {"error":"..."}。
+     */
+    public String cfFetchSync(String method, String url, String headersJson,
+                              String bodyB64, int timeoutSec) {
+        final String reqId = java.util.UUID.randomUUID().toString();
+        byte[] body = (bodyB64 == null || bodyB64.isEmpty())
+                ? new byte[0] : Base64.decode(bodyB64, Base64.DEFAULT);
+        final java.util.concurrent.CountDownLatch latch =
+                new java.util.concurrent.CountDownLatch(1);
+        synchronized (cfLatches) {
+            cfBodies.put(reqId, body);
+            cfLatches.put(reqId, latch);
+        }
+        try {
+            String js = "(async()=>{"
+                    + "var reqId=" + JSONObject.quote(reqId) + ";"
+                    + "try{"
+                    + "var n=window.MssgApi.cfBodyChunks(reqId);"
+                    + "var parts=[];"
+                    + "for(var i=0;i<n;i++){"
+                    + "var b=window.MssgApi.cfBodyChunk(reqId,i);"
+                    + "var bin=atob(b);var u8=new Uint8Array(bin.length);"
+                    + "for(var j=0;j<bin.length;j++)u8[j]=bin.charCodeAt(j);"
+                    + "parts.push(u8);}"
+                    + "var headers=JSON.parse(" + JSONObject.quote(headersJson) + ");"
+                    + "var resp=await fetch(" + JSONObject.quote(url) + ",{"
+                    + "method:" + JSONObject.quote(method) + ","
+                    + "headers:headers,"
+                    + (body.length > 0 ? "body:new Blob(parts)," : "")
+                    + "});"
+                    + "var text=await resp.text();"
+                    + "window.MssgApi.cfFetchResult(reqId,"
+                    + "JSON.stringify({status:resp.status,body:text}));"
+                    + "}catch(e){window.MssgApi.cfFetchResult(reqId,"
+                    + "JSON.stringify({error:String((e&&e.stack)||e)}));}"
+                    + "})();";
+            new Handler(Looper.getMainLooper()).post(() -> wv.evaluateJavascript(js, null));
+            boolean done = latch.await(timeoutSec + 15,
+                    java.util.concurrent.TimeUnit.SECONDS);
+            synchronized (cfLatches) {
+                String r = cfResults.remove(reqId);
+                if (!done) return "{\"error\":\"timeout\"}";
+                return r != null ? r : "{\"error\":\"no result\"}";
+            }
+        } catch (Exception e) {
+            return "{\"error\":" + JSONObject.quote(e.toString()) + "}";
+        } finally {
+            synchronized (cfLatches) {
+                cfBodies.remove(reqId);
+                cfLatches.remove(reqId);
+            }
+        }
+    }
+
+    @JavascriptInterface
+    public void cfFetchResult(String reqId, String json) {
+        synchronized (cfLatches) {
+            cfResults.put(reqId, json);
+            java.util.concurrent.CountDownLatch l = cfLatches.get(reqId);
+            if (l != null) l.countDown();
+        }
+    }
+
+    @JavascriptInterface
+    public int cfBodyChunks(String reqId) {
+        byte[] b;
+        synchronized (cfLatches) { b = cfBodies.get(reqId); }
+        if (b == null) return 0;
+        return (b.length + 65535) / 65536;
+    }
+
+    @JavascriptInterface
+    public String cfBodyChunk(String reqId, int i) {
+        byte[] b;
+        synchronized (cfLatches) { b = cfBodies.get(reqId); }
+        if (b == null) return "";
+        int s = i * 65536;
+        int e = Math.min(s + 65536, b.length);
+        if (s >= b.length) return "";
+        return Base64.encodeToString(b, s, e - s, Base64.NO_WRAP);
     }
 }
