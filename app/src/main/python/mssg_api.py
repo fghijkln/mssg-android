@@ -177,6 +177,21 @@ def export_zip(site_dir: str) -> str:
         return _fail(traceback.format_exc(limit=3))
 
 
+def export_source_backup(site_dir: str) -> str:
+    """打包站点源码（文章/配置/模板/数据），不含构建产物与 Token，返回 zip 路径。"""
+    try:
+        import datetime
+
+        from mssg.backup import backup_site
+
+        stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        zip_path = Path(site_dir).parent / ("mssg-backup-%s.zip" % stamp)
+        path = backup_site(site_dir, dest=zip_path)
+        return _ok(path=path, name=Path(path).name)
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
 def export_page_html(site_dir: str, rel: str) -> str:
     """构建并返回单篇文章的 HTML 文件路径。"""
     try:

@@ -187,6 +187,9 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     <button class="theme-opt" onclick="openCf()">
       <span>☁️</span><span>部署到 Cloudflare Pages<br><small style="color:var(--muted)">连接账号后一键上线（可选）</small></span>
     </button>
+    <button class="theme-opt" onclick="doBackupSite()">
+      <span>🗄️</span><span>备份站点源码<br><small style="color:var(--muted)">打包文章/配置/模板，不含 Token，发到微信/云盘/邮箱</small></span>
+    </button>
   </div>
 </div>
 
@@ -361,6 +364,17 @@ function pickTheme(id){
 /* 导出 */
 function openExport(){ $("exportSheet").classList.add("show"); }
 function closeExport(){ $("exportSheet").classList.remove("show"); }
+function doBackupSite(){
+  closeExport();
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().backupSite()); }
+    catch(e){ toast("备份失败："+e); return; }
+    if(!r.ok){ toast(r.msg); return; }
+    bridge().shareFile(r.path, r.name || "mssg-backup.zip", "application/zip");
+    toast("正在打开分享…把备份发给自己（文件传输助手/云盘/邮箱）", 3600);
+  });
+}
 function doExportZip(save){
   closeExport();
   withLoading(()=>{

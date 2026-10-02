@@ -211,6 +211,15 @@ public class ApiBridge {
     }
 
     @JavascriptInterface
+    public String backupSite() {
+        try {
+            return api().callAttr("export_source_backup", siteDir).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
     public String exportPageHtml(String rel) {
         try {
             return api().callAttr("export_page_html", siteDir, rel).toString();
