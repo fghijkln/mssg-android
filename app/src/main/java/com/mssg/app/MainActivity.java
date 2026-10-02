@@ -40,7 +40,7 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setAllowFileAccess(true);
         wv.addJavascriptInterface(
-                new ApiBridge(siteDir.getAbsolutePath()), "MssgApi");
+                new ApiBridge(this, siteDir.getAbsolutePath()), "MssgApi");
         wv.setWebViewClient(new WebViewClient());
         wv.loadUrl("file:///android_asset/admin/index.html");
     }

@@ -7,6 +7,8 @@ import json
 import os
 import re
 import traceback
+import zipfile
+from pathlib import Path
 
 
 def _app(site_dir):
@@ -140,5 +142,50 @@ def set_theme(site_dir: str, theme: str) -> str:
             f.write(new_text)
         msg = _app(site_dir)._rebuild()
         return _ok(msg=msg, theme=theme)
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def _output_dir(site_dir: str) -> Path:
+    from mssg.site import Site
+
+    out = Site(site_dir).cfg["build"].get("output_dir", "public")
+    return Path(site_dir) / out
+
+
+def export_zip(site_dir: str) -> str:
+    """构建整站并打包为 zip（用于上传到 Pages/Netlify 等），返回文件路径。"""
+    try:
+        app = _app(site_dir)
+        msg = app._rebuild()
+        public = _output_dir(site_dir)
+        if not public.is_dir():
+            return _fail("构建输出不存在")
+        zip_path = Path(site_dir) / "mssg-site.zip"
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for f in sorted(public.rglob("*")):
+                if f.is_file():
+                    zf.write(f, f.relative_to(public).as_posix())
+        return _ok(path=str(zip_path), msg=msg)
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def export_page_html(site_dir: str, rel: str) -> str:
+    """构建并返回单篇文章的 HTML 文件路径。"""
+    try:
+        from mssg.site import Site
+
+        app = _app(site_dir)
+        app._rebuild()
+        site = Site(site_dir)
+        lang, base_rel = site._split_lang(rel)
+        default = site._default_lang()
+        prefix = "" if lang == default else lang + "/"
+        url = prefix + base_rel[:-3] + ".html"
+        html_path = _output_dir(site_dir) / url
+        if not html_path.is_file():
+            return _fail("页面尚未生成：%s" % url)
+        return _ok(path=str(html_path), name=html_path.name)
     except Exception:
         return _fail(traceback.format_exc(limit=3))

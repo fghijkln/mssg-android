@@ -95,6 +95,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   <h1>mssg</h1>
   <div class="actions">
     <button class="btn ghost" onclick="openThemes()">🎨</button>
+    <button class="btn ghost" onclick="openExport()">导出</button>
     <button class="btn ghost" onclick="doPreview()">预览</button>
     <button class="btn ghost" onclick="doBuild()">构建</button>
   </div>
@@ -108,6 +109,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   <div class="editor-bar">
     <button class="btn ghost" onclick="closeEditor()">‹ 返回</button>
     <h2 id="editorTitle">新建文章</h2>
+    <button class="btn ghost" onclick="doSharePage()">分享</button>
     <button class="btn ghost" onclick="doSave()">保存</button>
   </div>
   <div class="editor-body">
@@ -152,6 +154,18 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   <div class="sheet">
     <h3>选择主题</h3>
     <div id="themeList"></div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="exportSheet" onclick="if(event.target===this)closeExport()">
+  <div class="sheet">
+    <h3>导出整站</h3>
+    <button class="theme-opt" onclick="doExportZip(true)">
+      <span>💾</span><span>保存 ZIP 到下载<br><small style="color:var(--muted)">用于上传到 Cloudflare Pages / Netlify</small></span>
+    </button>
+    <button class="theme-opt" onclick="doExportZip(false)">
+      <span>📤</span><span>分享 ZIP<br><small style="color:var(--muted)">通过微信 / 邮件 / 云盘发送</small></span>
+    </button>
   </div>
 </div>
 
@@ -309,6 +323,40 @@ function pickTheme(id){
     try{ r = JSON.parse(bridge().setTheme(id)); }
     catch(e){ toast("切换失败："+e); return; }
     toast(r.ok ? ("已切换，" + (r.msg||"")) : r.msg);
+  });
+}
+
+/* 导出 */
+function openExport(){ $("exportSheet").classList.add("show"); }
+function closeExport(){ $("exportSheet").classList.remove("show"); }
+function doExportZip(save){
+  closeExport();
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().exportZip()); }
+    catch(e){ toast("导出失败："+e); return; }
+    if(!r.ok){ toast(r.msg); return; }
+    if(save){
+      let s;
+      try{ s = JSON.parse(bridge().saveToDownload(r.path, "mssg-site.zip", "application/zip")); }
+      catch(e){ toast("保存失败："+e); return; }
+      toast(s.ok ? ("已保存到" + s.msg) : s.msg, 3200);
+    }else{
+      bridge().shareFile(r.path, "mssg-site.zip", "application/zip");
+      toast("正在打开分享…");
+    }
+  });
+}
+function doSharePage(){
+  const rel = $("f_rel").value.trim();
+  if(!rel){ toast("没有可分享的页面"); return; }
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().exportPageHtml(rel)); }
+    catch(e){ toast("导出失败："+e); return; }
+    if(!r.ok){ toast(r.msg); return; }
+    bridge().shareFile(r.path, r.name || "page.html", "text/html");
+    toast("正在打开分享…");
   });
 }
 
