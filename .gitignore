@@ -1,0 +1,7 @@
+# APK 二进制不进仓库，改走 GitHub Release 发布
+apk/
+*.apk
+# Gradle 构建产物
+build/
+.gradle/
+local.properties
