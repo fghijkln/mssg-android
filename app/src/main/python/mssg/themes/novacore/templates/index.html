@@ -13,9 +13,9 @@
 </section>
 <section class="section">
 <div class="wrap">
-<span class="eyebrow2" data-reveal="up">为什么选择我们</span>
-<h2 class="sec-title" data-reveal="up" data-delay="1">为小团队而生的生产力</h2>
-<p class="sec-sub" data-reveal="up" data-delay="2">从想法到上线，一套工具全搞定。</p>
+<span class="eyebrow2" data-reveal="up">{{ "Why choose us" if lang == "en" else "为什么选择我们" }}</span>
+<h2 class="sec-title" data-reveal="up" data-delay="1">{{ "Productivity built for small teams" if lang == "en" else "为小团队而生的生产力" }}</h2>
+<p class="sec-sub" data-reveal="up" data-delay="2">{{ "From idea to launch" if lang == "en" else "从想法到上线" }}，{{ "One toolkit does it all" if lang == "en" else "一套工具全搞定" }}。</p>
 <div class="cards">
 {% for f in site.features %}
 <div class="card" data-reveal="up" data-delay="{{ (loop.index0 % 3) + 1 }}">
@@ -28,19 +28,19 @@
 </section>
 <section class="section news" id="news">
 <div class="wrap">
-<span class="eyebrow2" data-reveal="up">最新动态</span>
-<h2 class="sec-title" data-reveal="up" data-delay="1">新闻</h2>
+<span class="eyebrow2" data-reveal="up">{{ "Latest" if lang == "en" else "最新动态" }}</span>
+<h2 class="sec-title" data-reveal="up" data-delay="1">{{ "News" if lang == "en" else "新闻" }}</h2>
 <ul class="post-list">
 {% for p in pages[:5] %}
 <li data-reveal="right" data-delay="{{ (loop.index0 % 3) + 1 }}"><span class="date">{{ p.date }}</span> <a href="/{{ p.url }}">{{ p.title }}</a></li>
 {% endfor %}
 </ul>
-<p class="more" data-reveal="up"><a href="/archive.html">全部归档 →</a></p>
+<p class="more" data-reveal="up"><a href="/archive.html">{{ "View all archives" if lang == "en" else "全部归档" }} →</a></p>
 {% if pagination.multiple %}
 <nav class="pager">
-{% if pagination.has_prev %}<a href="{{ pagination.prev_url }}">← 上一页</a>{% endif %}
+{% if pagination.has_prev %}<a href="{{ pagination.prev_url }}">← {{ "Previous" if lang == "en" else "上一页" }}</a>{% endif %}
 <span>{{ pagination.page }} / {{ pagination.total_pages }}</span>
-{% if pagination.has_next %}<a href="{{ pagination.next_url }}">下一页 →</a>{% endif %}
+{% if pagination.has_next %}<a href="{{ pagination.next_url }}">{{ "Next" if lang == "en" else "下一页" }} →</a>{% endif %}
 </nav>
 {% endif %}
 </div>

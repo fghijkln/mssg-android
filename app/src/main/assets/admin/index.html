@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh">
+<html lang="zh" id="htmlRoot">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>织网</title>
+<title data-i18n="app.name">织网</title>
 <style>
 :root{
   --primary:#4f46e5; --primary-dark:#4338ca;
@@ -142,11 +142,11 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 <div class="appbar">
   <div style="display:flex;align-items:center;gap:6px">
     <button class="btn ghost" onclick="openDrawer()" aria-label="菜单">☰</button>
-    <h1>织网</h1>
+    <h1 data-i18n="app.name">织网</h1>
   </div>
   <div class="actions">
-    <button class="btn ghost" onclick="doPreview()">预览</button>
-    <button class="btn ghost" onclick="openBuildDialog()">构建</button>
+    <button class="btn ghost" data-i18n="top.preview" onclick="doPreview()">预览</button>
+    <button class="btn ghost" data-i18n="top.build" onclick="openBuildDialog()">构建</button>
   </div>
 </div>
 
@@ -155,23 +155,24 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   <div class="drawer-head" style="display:flex;align-items:center;justify-content:space-between">mssg
     <button class="btn ghost" style="padding:6px 12px" onclick="closeDrawer()">✕</button>
   </div>
-  <button class="drawer-item" onclick="closeDrawer();openAiBuild()">✨ AI 建站</button>
-  <div class="drawer-sec">内容</div>
-  <button class="drawer-item" onclick="closeDrawer();openEditor()">✏️ 新建文章</button>
-  <div class="drawer-sec">构建</div>
-  <button class="drawer-item" onclick="closeDrawer();doBuild()">🔨 构建站点</button>
-  <button class="drawer-item" onclick="closeDrawer();doPreview()">👁 预览站点</button>
-  <button class="drawer-item" onclick="closeDrawer();openFiles()">📁 构建项目</button>
-  <button class="drawer-item" onclick="closeDrawer();doCleanBuild()">🧹 清除构建产物</button>
-  <div class="drawer-sec">发布</div>
-  <button class="drawer-item" onclick="closeDrawer();openExport()">📦 导出 ZIP</button>
-  <button class="drawer-item" onclick="closeDrawer();openCf()">☁️ 部署到 Cloudflare Pages</button>
-  <button class="drawer-item" onclick="closeDrawer();doBackupSite()">🗄️ 备份站点源码</button>
-  <button class="drawer-item" onclick="closeDrawer();pickBackup()">📥 从备份恢复</button>
-  <div class="drawer-sec">设置</div>
-  <button class="drawer-item" onclick="toggleTheme()">🌙 深色模式<small id="themeLabel"></small></button>
-  <button class="drawer-item" onclick="closeDrawer();openPlugins()">🧩 扩展商店</button>
-  <button class="drawer-item" onclick="closeDrawer();checkUpdate(true)">🔄 检查更新<small id="verLabelD"></small></button>
+  <button class="drawer-item" data-i18n="drawer.ai_build" onclick="closeDrawer();openAiBuild()">✨ AI 建站</button>
+  <div class="drawer-sec" data-i18n="drawer.sec_content">内容</div>
+  <button class="drawer-item" data-i18n="drawer.new_post" onclick="closeDrawer();openEditor()">✏️ 新建文章</button>
+  <div class="drawer-sec" data-i18n="drawer.sec_build">构建</div>
+  <button class="drawer-item" data-i18n="drawer.build" onclick="closeDrawer();doBuild()">🔨 构建站点</button>
+  <button class="drawer-item" data-i18n="drawer.preview" onclick="closeDrawer();doPreview()">👁 预览站点</button>
+  <button class="drawer-item" data-i18n="drawer.projects" onclick="closeDrawer();openFiles()">📁 构建项目</button>
+  <button class="drawer-item" data-i18n="drawer.clean" onclick="closeDrawer();doCleanBuild()">🧹 清除构建产物</button>
+  <div class="drawer-sec" data-i18n="drawer.sec_publish">发布</div>
+  <button class="drawer-item" data-i18n="drawer.export" onclick="closeDrawer();openExport()">📦 导出 ZIP</button>
+  <button class="drawer-item" data-i18n="drawer.cf" onclick="closeDrawer();openCf()">☁️ 部署到 Cloudflare Pages</button>
+  <button class="drawer-item" data-i18n="drawer.backup" onclick="closeDrawer();doBackupSite()">🗄️ 备份站点源码</button>
+  <button class="drawer-item" data-i18n="drawer.restore" onclick="closeDrawer();pickBackup()">📥 从备份恢复</button>
+  <div class="drawer-sec" data-i18n="drawer.sec_settings">设置</div>
+  <button class="drawer-item" data-i18n="drawer.dark" onclick="toggleTheme()">🌙 深色模式<small id="themeLabel"></small></button>
+  <button class="drawer-item" data-i18n="drawer.plugins" onclick="closeDrawer();openPlugins()">🧩 扩展商店</button>
+  <button class="drawer-item" data-i18n="drawer.check_update" onclick="closeDrawer();checkUpdate(true)">🔄 检查更新<small id="verLabelD"></small></button>
+  <button class="drawer-item" onclick="setLang(APP_LANG==='zh'?'en':'zh')">🌐 <span data-i18n="drawer.language">语言 / Language</span></button>
 </nav>
 
 <div id="homeThemes" style="padding:10px 14px 0"></div>
@@ -181,41 +182,41 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 
 <div class="editor" id="editor">
   <div class="editor-bar">
-    <button class="btn ghost" onclick="closeEditor()">‹ 返回</button>
-    <h2 id="editorTitle">新建文章</h2>
-    <button class="btn ghost" onclick="doSharePage()">分享</button>
-    <button class="btn ghost" onclick="doSave()">保存</button>
+    <button class="btn ghost" data-i18n="editor.back" onclick="closeEditor()">‹ 返回</button>
+    <h2 id="editorTitle" data-i18n="editor.new">新建文章</h2>
+    <button class="btn ghost" data-i18n="editor.share" onclick="doSharePage()">分享</button>
+    <button class="btn ghost" data-i18n="editor.save" onclick="doSave()">保存</button>
   </div>
   <div class="editor-body">
     <div class="field">
-      <label>标题</label>
-      <input type="text" id="f_title" placeholder="文章标题">
+      <label data-i18n="editor.title">标题</label>
+      <input type="text" id="f_title" data-i18n-ph="editor.title_ph" placeholder="文章标题">
     </div>
     <div class="row2">
       <div class="field">
-        <label>文件名（content/ 下相对路径）</label>
+        <label data-i18n="editor.file">文件名（content/ 下相对路径）</label>
         <input type="text" id="f_rel" placeholder="post/hello.md">
       </div>
       <div class="field">
-        <label>日期</label>
+        <label data-i18n="editor.date">日期</label>
         <input type="date" id="f_date">
       </div>
     </div>
     <div class="row2">
       <div class="field">
-        <label>标签（逗号分隔）</label>
+        <label data-i18n="editor.tags">标签（逗号分隔）</label>
         <input type="text" id="f_tags" placeholder="生活, 随笔">
       </div>
       <div class="field">
-        <label>分类（逗号分隔）</label>
+        <label data-i18n="editor.category">分类（逗号分隔）</label>
         <input type="text" id="f_categories" placeholder="">
       </div>
     </div>
     <div class="field">
-      <label class="check"><input type="checkbox" id="f_draft"> 草稿（不发布）</label>
+      <label class="check"><input type="checkbox" id="f_draft"> <span data-i18n="editor.draft">草稿（不发布）</span></label>
     </div>
     <div class="field">
-      <label>正文（Markdown）</label>
+      <label data-i18n="editor.content">正文（Markdown）</label>
       <div class="mdbar">
         <button type="button" onclick="mdLinePrefix('## ')" title="标题">H</button>
         <button type="button" onclick="mdWrap('**','**','加粗')" title="加粗">B</button>
@@ -290,7 +291,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     </div>
     <button class="btn" onclick="runAiBuild()" style="margin-bottom:8px">🚀 生成网站</button>
     <div id="aiBuildResult" style="display:none">
-      <div class="field"><label>结果</label>
+      <div class="field"><label data-i18n="ai.result">结果</label>
         <div id="aiBuildMsg" style="font-size:15px;margin-bottom:10px"></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
@@ -305,7 +306,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 <div class="sheet-backdrop" id="aiSheet" onclick="if(event.target===this)closeAi()">
   <div class="sheet" style="max-height:86vh;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <h3 style="margin:0;flex:1">🤖 AI 助手</h3>
+      <h3 style="margin:0;flex:1" data-i18n="ai.title">🤖 AI 助手</h3>
       <select id="aiPluginSel" onchange="switchAiPlugin(this.value)" style="display:none;max-width:45%"></select>
     </div>
     <div id="aiActions" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
@@ -314,35 +315,35 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
         <div id="aiResult" style="border:1px solid var(--input-border);background:var(--card);border-radius:12px;padding:12px 14px;max-height:30vh;overflow-y:auto;white-space:pre-wrap;font-size:15px"></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn sm" onclick="aiInsert()">插入到光标</button>
-        <button class="btn sm" onclick="aiReplace()">替换全文</button>
-        <button class="btn ghost sm" onclick="aiCopy()">复制</button>
+        <button class="btn sm" data-i18n="ai.insert" onclick="aiInsert()">插入到光标</button>
+        <button class="btn sm" data-i18n="ai.replace" onclick="aiReplace()">替换全文</button>
+        <button class="btn ghost sm" data-i18n="ai.copy" onclick="aiCopy()">复制</button>
       </div>
     </div>
-    <div class="drawer-sec">接口设置 <small style="color:var(--muted)">兼容 OpenAI 格式</small></div>
-    <div class="field"><label>API 地址</label><input type="text" id="ai_endpoint" placeholder="https://api.deepseek.com/v1"></div>
-    <div class="field"><label>API Key</label><input type="password" id="ai_key" placeholder="sk-…"></div>
-    <div class="field"><label>模型</label>
+    <div class="drawer-sec"><span data-i18n="ai.settings">接口设置</span> <small style="color:var(--muted)" data-i18n="ai.openai_compat">兼容 OpenAI 格式</small></div>
+    <div class="field"><label data-i18n="ai.endpoint">API 地址</label><input type="text" id="ai_endpoint" placeholder="https://api.deepseek.com/v1"></div>
+    <div class="field"><label data-i18n="ai.key">API Key</label><input type="password" id="ai_key" placeholder="sk-…"></div>
+    <div class="field"><label data-i18n="ai.model">模型</label>
       <div style="display:flex;gap:8px;align-items:center">
         <input type="text" id="ai_model" placeholder="deepseek-chat" style="flex:1">
         <button class="btn sm" onclick="openModelPicker()" title="选择模型" style="font-size:18px;padding:8px 12px">☰</button>
       </div></div>
-    <button class="btn" onclick="saveAiSettings()" style="margin-bottom:8px">保存设置</button>
-    <button class="btn ghost" onclick="closeAi()">关闭</button>
+    <button class="btn" data-i18n="ai.save_settings" onclick="saveAiSettings()" style="margin-bottom:8px">保存设置</button>
+    <button class="btn ghost" data-i18n="common.close" onclick="closeAi()">关闭</button>
   </div>
 </div>
 
 <div class="sheet-backdrop" id="modelPicker" onclick="if(event.target===this)closeModelPicker()">
   <div class="sheet" style="max-height:78vh;display:flex;flex-direction:column">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <h3 style="margin:0">可用模型列表</h3>
+      <h3 style="margin:0" data-i18n="model_picker.title">可用模型列表</h3>
       <button class="btn sm" onclick="fetchAiModels()" title="刷新" style="border-radius:50%;width:38px;height:38px;padding:0;font-size:16px">🔄</button>
     </div>
-    <div class="field"><input type="text" id="modelSearch" placeholder="🔍 搜索模型" oninput="renderModelList()"></div>
+    <div class="field"><input type="text" id="modelSearch" data-i18n-ph="model_picker.search_ph" placeholder="🔍 搜索模型" oninput="renderModelList()"></div>
     <div id="modelList" style="overflow-y:auto;flex:1;min-height:120px;margin:0 -4px 8px"></div>
     <div id="modelCount" style="font-size:13px;color:var(--muted);margin-bottom:10px"></div>
     <div style="display:flex;gap:8px">
-      <button class="btn ghost" onclick="closeModelPicker()" style="flex:1">关闭</button>
+      <button class="btn ghost" data-i18n="model_picker.close" onclick="closeModelPicker()" style="flex:1">关闭</button>
       <button class="btn" id="modelConfirmBtn" onclick="confirmModel()" style="flex:1">确定</button>
     </div>
   </div>
@@ -350,46 +351,46 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 
 <div class="sheet-backdrop" id="pluginSheet" onclick="if(event.target===this)closePlugins()">
   <div class="sheet" style="max-height:82vh;display:flex;flex-direction:column">
-    <h3>🧩 扩展商店</h3>
-    <div class="drawer-sec">已安装</div>
+    <h3 data-i18n="store.title">🧩 扩展商店</h3>
+    <div class="drawer-sec" data-i18n="store.installed">已安装</div>
     <div id="pluginInstalled" style="margin-bottom:6px"></div>
-    <div class="drawer-sec">可安装 <small style="color:var(--muted)">mssg-plugins 仓库</small></div>
+    <div class="drawer-sec"><span data-i18n="store.available">可安装</span> <small style="color:var(--muted)">mssg-plugins</small></div>
     <div id="pluginAvailable" style="overflow-y:auto;margin:0 -4px 8px"></div>
-    <button class="btn ghost" onclick="closePlugins()">关闭</button>
+    <button class="btn ghost" data-i18n="common.close" onclick="closePlugins()">关闭</button>
   </div>
 </div>
 
 <div class="sheet-backdrop" id="buildSheet" onclick="if(event.target===this)closeBuildDialog()">
   <div class="sheet">
-    <h3>构建为项目</h3>
-    <div class="field"><label>项目名称</label>
-      <input type="text" id="buildName" placeholder="比如：我的博客 v1">
+    <h3 data-i18n="build_dialog.title">构建为项目</h3>
+    <div class="field"><label data-i18n="build_dialog.name">项目名称</label>
+      <input type="text" id="buildName" data-i18n-ph="build_dialog.name_ph" placeholder="比如：我的博客 v1">
     </div>
     <div id="buildExisting" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
     <div style="display:flex;gap:8px">
-      <button class="btn" onclick="doBuildProject()" style="flex:1">🚀 构建</button>
-      <button class="btn ghost" onclick="closeBuildDialog()">取消</button>
+      <button class="btn" data-i18n="build_dialog.build" onclick="doBuildProject()" style="flex:1">🚀 构建</button>
+      <button class="btn ghost" data-i18n="common.cancel" onclick="closeBuildDialog()">取消</button>
     </div>
-    <div style="font-size:13px;color:var(--muted);margin-top:10px">用已有的名字会覆盖该项目（会二次确认）；新名字则新建项目。</div>
+    <div style="font-size:13px;color:var(--muted);margin-top:10px" data-i18n="build_dialog.hint">用已有的名字会覆盖该项目（会二次确认）；新名字则新建项目。</div>
   </div>
 </div>
 
 <div class="sheet-backdrop" id="filesSheet" onclick="if(event.target===this)closeFiles()">
   <div class="sheet" style="max-height:82vh;display:flex;flex-direction:column">
-    <h3 id="filesTitle">构建项目 <small id="filesTotal" style="color:var(--muted);font-weight:400"></small></h3>
+    <h3 id="filesTitle"><span data-i18n="files.title">构建项目</span> <small id="filesTotal" style="color:var(--muted);font-weight:400"></small></h3>
     <div id="filesList" style="overflow-y:auto;margin:0 -4px 8px"></div>
-    <button class="btn ghost" onclick="closeFiles()">关闭</button>
+    <button class="btn ghost" data-i18n="common.close" onclick="closeFiles()">关闭</button>
   </div>
 </div>
 
 <div class="sheet-backdrop" id="updateSheet" onclick="if(event.target===this)closeUpdate()">
   <div class="sheet">
-    <h3>🔄 发现新版本 <span id="updVer"></span></h3>
+    <h3><span data-i18n="update.title">🔄 发现新版本</span> <span id="updVer"></span></h3>
     <div id="updBody" style="font-size:14px;color:var(--muted);white-space:pre-wrap;max-height:30vh;overflow-y:auto;margin-bottom:12px"></div>
     <button class="theme-opt" onclick="doUpdateDownload()">
-      <span>⬇️</span><span>下载并安装<br><small style="color:var(--muted)">应用内下载，完成后自动调起安装</small></span>
+      <span>⬇️</span><span><span data-i18n="update.download">下载并安装</span><br><small style="color:var(--muted)" data-i18n="update.download_hint">应用内下载，完成后自动调起安装</small></span>
     </button>
-    <button class="btn ghost" id="updLater" onclick="closeUpdate()">稍后</button>
+    <button class="btn ghost" id="updLater" data-i18n="update.later" onclick="closeUpdate()">稍后</button>
   </div>
 </div>
 
@@ -402,11 +403,274 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 
 <script>
 "use strict";
+/* ============ I18N ============ */
+const I18N = {
+zh: {
+  "app.name": "织网",
+  "drawer.ai_build": "✨ AI 建站",
+  "drawer.sec_content": "内容",
+  "drawer.new_post": "✏️ 新建文章",
+  "drawer.sec_build": "构建",
+  "drawer.build": "🔨 构建站点",
+  "drawer.preview": "👁 预览站点",
+  "drawer.projects": "📁 构建项目",
+  "drawer.clean": "🧹 清除构建产物",
+  "drawer.sec_publish": "发布",
+  "drawer.export": "📦 导出 ZIP",
+  "drawer.cf": "☁️ 部署到 Cloudflare Pages",
+  "drawer.backup": "🗄️ 备份站点源码",
+  "drawer.restore": "📥 从备份恢复",
+  "drawer.sec_settings": "设置",
+  "drawer.dark": "🌙 深色模式",
+  "drawer.plugins": "🧩 扩展商店",
+  "drawer.check_update": "🔄 检查更新",
+  "drawer.language": "🌐 语言 / Language",
+  "top.preview": "预览",
+  "top.build": "构建",
+  "home.theme": "🎨 主题",
+  "home.empty": "还没有文章<br>点右下角 ＋ 写第一篇吧",
+  "editor.back": "‹ 返回",
+  "editor.new": "新建文章",
+  "editor.edit": "编辑文章",
+  "editor.share": "分享",
+  "editor.save": "保存",
+  "editor.title": "标题",
+  "editor.title_ph": "文章标题",
+  "editor.file": "文件名（content/ 下相对路径）",
+  "editor.date": "日期",
+  "editor.tags": "标签（逗号分隔）",
+  "editor.category": "分类",
+  "editor.draft": "草稿",
+  "editor.content": "正文（Markdown）",
+  "editor.ai": "🤖 AI",
+  "editor.draft_ph": "草稿（不发布）",
+  "editor.category_ph": "分类（逗号分隔）",
+  "common.close": "关闭",
+  "common.confirm": "确定",
+  "common.cancel": "取消",
+  "common.delete": "删除",
+  "common.save": "保存",
+  "common.loading": "加载中…",
+  "ver.current": "当前版本 v",
+  "ai.title": "🤖 AI 助手",
+  "ai.result": "结果",
+  "ai.insert": "插入到光标",
+  "ai.replace": "替换全文",
+  "ai.copy": "复制",
+  "ai.settings": "接口设置",
+  "ai.openai_compat": "兼容 OpenAI 格式",
+  "ai.endpoint": "API 地址",
+  "ai.key": "API Key",
+  "ai.model": "模型",
+  "ai.save_settings": "保存设置",
+  "ai.builtin": "内置默认",
+  "ai.actions_count": "个动作",
+  "model_picker.title": "可用模型列表",
+  "model_picker.search_ph": "🔍 搜索模型",
+  "model_picker.close": "关闭",
+  "model_picker.confirm": "确定",
+  "model_picker.selected": "已选",
+  "model_picker.shown": "已显示",
+  "model_picker.models": "个模型",
+  "model_picker.empty": "还没有模型列表，点右上 🔄 拉取",
+  "model_picker.no_match": "没有匹配的模型",
+  "msg.fill_filename": "请先填写文件名，再插入图片",
+  "msg.img_inserted": "图片已插入",
+  "msg.describe_site": "先描述一下你想要的网站",
+  "msg.config_api_first": "请先在 AI 助手里配置 API 地址和 Key",
+  "msg.ai_building": "AI 正在建站…",
+  "msg.parse_fail": "解析失败",
+  "msg.ai_no_pages": "AI 没有生成页面，换个描述再试",
+  "msg.build_done_preview": "建站完成，正在打开预览",
+  "msg.confirm_promote": "把 AI 生成的站点设为当前站点？当前站点的内容会被替换。",
+  "msg.promoted": "已设为当前站点",
+  "msg.fill_api": "请先填 API 地址",
+  "msg.fetching_models": "正在拉取模型列表…",
+  "msg.config_api_key": "请先配置 API 地址和 Key",
+  "msg.empty_content": "正文为空，先写点东西",
+  "msg.ai_thinking": "AI 思考中…",
+  "msg.inserted": "已插入",
+  "msg.confirm_replace": "用 AI 结果替换全文？",
+  "msg.replaced": "已替换",
+  "msg.copied": "已复制",
+  "msg.copy_fail": "复制失败",
+  "msg.plugin_invalid": "插件信息非法",
+  "msg.download_parse_fail": "下载失败：解析错误",
+  "msg.plugin_empty": "插件文件为空",
+  "msg.title_file_required": "标题和文件名不能为空",
+  "msg.input_project_name": "请输入项目名称",
+  "msg.confirm_clean": "删除构建产物（public/）？文章、配置、主题不受影响。",
+  "msg.opening_share": "正在打开分享…",
+  "msg.check_timeout": "检查超时",
+  "msg.no_version": "没取到版本信息",
+  "msg.paste_token": "请先粘贴 API Token",
+  "msg.paste_account": "请先粘贴 Account ID",
+  "msg.no_share_page": "没有可分享的页面",
+  "msg.confirm_clear_css": "清除自定义 CSS，恢复主题默认样式？",
+  "msg.css_restored": "已恢复默认",
+  "store.title": "🧩 扩展商店",
+  "store.installed": "已安装",
+  "store.available": "可安装",
+  "build_dialog.title": "构建为项目",
+  "build_dialog.name": "项目名称",
+  "build_dialog.name_ph": "比如：我的博客 v1",
+  "build_dialog.build": "🚀 构建",
+  "build_dialog.hint": "用已有的名字会先提示确认覆盖",
+  "files.title": "构建项目",
+  "files.close": "关闭",
+  "update.title": "🔄 发现新版本",
+  "update.download": "下载并安装",
+  "update.download_hint": "应用内下载，完成后自动安装",
+  "update.later": "稍后",
+},
+en: {
+  "app.name": "Mssg",
+  "drawer.ai_build": "✨ AI Site Builder",
+  "drawer.sec_content": "Content",
+  "drawer.new_post": "✏️ New Post",
+  "drawer.sec_build": "Build",
+  "drawer.build": "🔨 Build Site",
+  "drawer.preview": "👁 Preview Site",
+  "drawer.projects": "📁 Projects",
+  "drawer.clean": "🧹 Clean Build Output",
+  "drawer.sec_publish": "Publish",
+  "drawer.export": "📦 Export ZIP",
+  "drawer.cf": "☁️ Deploy to Cloudflare Pages",
+  "drawer.backup": "🗄️ Backup Site Source",
+  "drawer.restore": "📥 Restore from Backup",
+  "drawer.sec_settings": "Settings",
+  "drawer.dark": "🌙 Dark Mode",
+  "drawer.plugins": "🧩 Plugin Store",
+  "drawer.check_update": "🔄 Check for Updates",
+  "drawer.language": "🌐 Language / 语言",
+  "top.preview": "Preview",
+  "top.build": "Build",
+  "home.theme": "🎨 Themes",
+  "home.empty": "No posts yet<br>Tap ＋ to write your first",
+  "editor.back": "‹ Back",
+  "editor.new": "New Post",
+  "editor.edit": "Edit Post",
+  "editor.share": "Share",
+  "editor.save": "Save",
+  "editor.title": "Title",
+  "editor.title_ph": "Post title",
+  "editor.file": "Filename (relative to content/)",
+  "editor.date": "Date",
+  "editor.tags": "Tags (comma separated)",
+  "editor.category": "Category",
+  "editor.draft": "Draft",
+  "editor.content": "Content (Markdown)",
+  "editor.ai": "🤖 AI",
+  "common.close": "Close",
+  "common.confirm": "OK",
+  "common.cancel": "Cancel",
+  "common.delete": "Delete",
+  "common.save": "Save",
+  "common.loading": "Loading…",
+  "ver.current": "Version v",
+  "ai.title": "🤖 AI Assistant",
+  "ai.result": "Result",
+  "ai.insert": "Insert at cursor",
+  "ai.replace": "Replace all",
+  "ai.copy": "Copy",
+  "ai.settings": "API Settings",
+  "ai.openai_compat": "OpenAI-compatible",
+  "ai.endpoint": "API Endpoint",
+  "ai.key": "API Key",
+  "ai.model": "Model",
+  "ai.save_settings": "Save Settings",
+  "ai.builtin": "Built-in",
+  "ai.actions_count": " actions",
+  "model_picker.title": "Available Models",
+  "model_picker.search_ph": "🔍 Search models",
+  "model_picker.close": "Close",
+  "model_picker.confirm": "OK",
+  "model_picker.selected": "selected",
+  "model_picker.shown": "Showing",
+  "model_picker.models": " models",
+  "model_picker.empty": "No model list yet, tap 🔄 to fetch",
+  "model_picker.no_match": "No matching models",
+  "msg.fill_filename": "Fill in the filename first, then insert image",
+  "msg.img_inserted": "Image inserted",
+  "msg.describe_site": "Describe the website you want first",
+  "msg.config_api_first": "Configure API endpoint and Key in AI Assistant first",
+  "msg.ai_building": "AI is building the site…",
+  "msg.parse_fail": "Parse failed",
+  "msg.ai_no_pages": "AI generated no pages, try another description",
+  "msg.build_done_preview": "Build done, opening preview",
+  "msg.confirm_promote": "Set the AI-generated site as current? Current content will be replaced.",
+  "msg.promoted": "Set as current site",
+  "msg.fill_api": "Fill in API endpoint first",
+  "msg.fetching_models": "Fetching model list…",
+  "msg.config_api_key": "Configure API endpoint and Key first",
+  "msg.empty_content": "Content is empty, write something first",
+  "msg.ai_thinking": "AI is thinking…",
+  "msg.inserted": "Inserted",
+  "msg.confirm_replace": "Replace entire content with AI result?",
+  "msg.replaced": "Replaced",
+  "msg.copied": "Copied",
+  "msg.copy_fail": "Copy failed",
+  "msg.plugin_invalid": "Invalid plugin info",
+  "msg.download_parse_fail": "Download failed: parse error",
+  "msg.plugin_empty": "Plugin file is empty",
+  "msg.title_file_required": "Title and filename are required",
+  "msg.input_project_name": "Enter a project name",
+  "msg.confirm_clean": "Delete build output (public/)? Posts, config and themes are unaffected.",
+  "msg.opening_share": "Opening share…",
+  "msg.check_timeout": "Check timed out",
+  "msg.no_version": "No version info retrieved",
+  "msg.paste_token": "Paste your API Token first",
+  "msg.paste_account": "Paste your Account ID first",
+  "msg.no_share_page": "No page to share",
+  "msg.confirm_clear_css": "Clear custom CSS and restore theme defaults?",
+  "msg.css_restored": "Restored to defaults",
+  "store.title": "🧩 Plugin Store",
+  "store.installed": "Installed",
+  "store.available": "Available",
+  "build_dialog.title": "Build as Project",
+  "build_dialog.name": "Project name",
+  "build_dialog.name_ph": "e.g. My Blog v1",
+  "build_dialog.build": "🚀 Build",
+  "build_dialog.hint": "Using an existing name will ask for overwrite confirmation",
+  "files.title": "Projects",
+  "files.close": "Close",
+  "update.title": "🔄 New version available",
+  "update.download": "Download & Install",
+  "update.download_hint": "In-app download, auto-install when done",
+  "update.later": "Later",
+},
+};
+let APP_LANG = "zh";
+try{ APP_LANG = localStorage.getItem("app_lang") || "zh"; }catch(e){}
+setTimeout(()=>{ try{ bridge().setAppLang(APP_LANG); }catch(e){} }, 1500);
+function t(key){
+  const d = I18N[APP_LANG] || I18N.zh;
+  return (d[key] !== undefined) ? d[key] : (I18N.zh[key] || key);
+}
+function setLang(l){
+  APP_LANG = (l === "en") ? "en" : "zh";
+  try{ localStorage.setItem("app_lang", APP_LANG); }catch(e){}
+  try{ bridge().setAppLang(APP_LANG); }catch(e){}
+  document.getElementById("htmlRoot").lang = APP_LANG;
+  document.title = t("app.name");
+  applyI18n();
+}
+function applyI18n(){
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const k = el.getAttribute("data-i18n");
+    el.innerHTML = t(k);
+  });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => {
+    el.placeholder = t(el.getAttribute("data-i18n-ph"));
+  });
+  try{ renderHomeThemes(); }catch(e){}
+  try{ refresh(); }catch(e){}
+}
 function openDrawer(){ $("drawer").classList.add("open"); $("drawerBackdrop").classList.add("show"); }
 function closeDrawer(){ $("drawer").classList.remove("open"); $("drawerBackdrop").classList.remove("show"); }
 setTimeout(()=>{
   try{
-    const v = "当前版本 v" + bridge().getAppVersion();
+    const v = t("ver.current") + bridge().getAppVersion();
     const a = $("verLabel"); if(a) a.textContent = v;
     const b = $("verLabelD"); if(b) b.textContent = v;
   }catch(e){}
@@ -453,7 +717,7 @@ function refresh(){
   const pages = r.pages || [];
   const el = $("list");
   if(!pages.length){
-    el.innerHTML = '<div class="empty">还没有文章<br>点右下角 ＋ 写第一篇吧</div>';
+    el.innerHTML = '<div class="empty">' + t("home.empty") + '</div>';
     return;
   }
   el.innerHTML = pages.map(p=>{
@@ -549,14 +813,14 @@ function mdImageUrl(){
 }
 function pickImage(){
   const rel = $("f_rel").value.trim();
-  if(!rel){ toast("请先填写文件名，再插入图片"); return; }
+  if(!rel){ toast(t("msg.fill_filename")); return; }
   try{ bridge().pickImage(rel); }
   catch(e){ toast("打不开相册：" + e); }
 }
 function onImagePicked(name){
   if(!name) return;
   mdInsert("\n![图片](" + name + ")\n");
-  toast("图片已插入");
+  toast(t("msg.img_inserted"));
 }
 
 /* 深色模式 */
@@ -615,9 +879,9 @@ function openAiBuild(){
 function closeAiBuild(){ $("aiBuildSheet").classList.remove("show"); }
 function runAiBuild(){
   const desc = ($("aiBuildDesc").value || "").trim();
-  if(!desc){ toast("先描述一下你想要的网站"); return; }
+  if(!desc){ toast(t("msg.describe_site")); return; }
   const s = aiSettings();
-  if(!s.endpoint || !s.key){ toast("请先在 AI 助手里配置 API 地址和 Key"); closeAiBuild(); openAi(); return; }
+  if(!s.endpoint || !s.key){ toast(t("msg.config_api_first")); closeAiBuild(); openAi(); return; }
   const themeHint = $("aiBuildTheme").value;
   const sysPrompt = "你是一个静态网站生成器。根据用户的一句话描述，生成一个完整的网站。\n\n" +
     "按以下格式返回（分隔符行必须独占一行）：\n\n" +
@@ -654,7 +918,7 @@ function runAiBuild(){
       {role:"user", content: desc}
     ]
   });
-  toast("AI 正在建站…");
+  toast(t("msg.ai_building"));
   $("aiBuildResult").style.display = "none";
   try{ bridge().fetchPostText("aibuild", url, headers, body); }
   catch(e){ toast("请求失败：" + e); }
@@ -669,16 +933,16 @@ function extractJson(text){
 }
 function onAiBuildResult(raw){
   let r;
-  try{ r = JSON.parse(raw); }catch(e){ toast("解析失败"); return; }
+  try{ r = JSON.parse(raw); }catch(e){ toast(t("msg.parse_fail")); return; }
   if(!r || r.error || r.status !== 200){
     toast("AI 请求失败：" + escHtml((r && (r.error || ("HTTP " + r.status))) || "未知错误"));
     return;
   }
   let j;
-  try{ j = JSON.parse(r.body); }catch(e){ toast("解析失败"); return; }
+  try{ j = JSON.parse(r.body); }catch(e){ toast(t("msg.parse_fail")); return; }
   const text = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
   if(!text){ toast("AI 无返回：" + escHtml((j.error && j.error.message) || "未知错误")); return; }
-  if(text.indexOf("@@@PAGE@@@") < 0){ toast("AI 没有生成页面，换个描述再试"); return; }
+  if(text.indexOf("@@@PAGE@@@") < 0){ toast(t("msg.ai_no_pages")); return; }
   withLoading(()=>{
     let rr;
     try{ rr = JSON.parse(bridge().aiCreateSite(text)); }
@@ -687,7 +951,7 @@ function onAiBuildResult(raw){
     $("aiBuildMsg").innerHTML = "已生成 <b>" + escHtml(rr.title || "") + "</b>，" +
       rr.pages + " 个页面，已存为项目「" + escHtml(rr.project || "") + "」。正在打开预览…返回后可点「设为我的站点」。";
     $("aiBuildResult").style.display = "block";
-    toast("建站完成，正在打开预览");
+    toast(t("msg.build_done_preview"));
     const proj = rr.project || "";
     setTimeout(()=>{ try{ bridge().previewProject(proj); }catch(e){ toast("预览失败：" + e); } }, 800);
   });
@@ -696,14 +960,14 @@ function aiPreview(){
   try{ bridge().previewAiSite(); }catch(e){ toast("预览失败：" + e); }
 }
 function aiPromote(){
-  if(!confirm("把 AI 生成的站点设为当前站点？当前站点的内容会被替换。")) return;
+  if(!confirm(t("msg.confirm_promote"))) return;
   withLoading(()=>{
     let r;
     try{ r = JSON.parse(bridge().aiPromoteSite()); }
     catch(e){ toast("失败：" + e); return; }
     if(!r.ok){ toast("失败：" + r.msg); return; }
     closeAiBuild();
-    toast("已设为当前站点");
+    toast(t("msg.promoted"));
     refreshPages();
   });
 }
@@ -802,9 +1066,9 @@ function loadAiActions(){
   const sel = $("aiPluginSel");
   if(contribs.length > 1){
     sel.style.display = "";
-    sel.innerHTML = '<option value="">内置默认</option>' + contribs.map(c =>
+    sel.innerHTML = '<option value="">' + t("ai.builtin") + '</option>' + contribs.map(c =>
       '<option value="' + escHtml(c.plugin) + '">' +
-      escHtml(c.pluginDesc || c.plugin) + '（' + c.items.length + ' 个动作）</option>').join("");
+      escHtml(c.pluginDesc || c.plugin) + '（' + c.items.length + t("ai.actions_count") + '）</option>').join("");
     sel.value = "";
   }else{
     sel.style.display = "none";
@@ -853,9 +1117,9 @@ function renderModelList(){
     '<span style="font-size:18px">' + (m === AI_PICKED ? "☑️" : "⬜") + '</span>' +
     '<span style="flex:1;word-break:break-all">' + escHtml(m) + '</span></div>'
   ).join("") : '<div style="color:var(--muted);text-align:center;padding:20px">' +
-    (AI_MODELS.length ? "没有匹配的模型" : "还没有模型列表，点右上 🔄 拉取") + '</div>';
-  $("modelCount").textContent = "已显示 " + list.length + " 个模型" + (AI_PICKED ? " · 已选：" + AI_PICKED : "");
-  $("modelConfirmBtn").textContent = "确定" + (AI_PICKED ? "（已选 1）" : "");
+    (AI_MODELS.length ? t("model_picker.no_match") : t("model_picker.empty")) + '</div>';
+  $("modelCount").textContent = t("model_picker.shown") + " " + list.length + t("model_picker.models") + (AI_PICKED ? " · " + t("model_picker.selected") + "：" + AI_PICKED : "");
+  $("modelConfirmBtn").textContent = t("model_picker.confirm") + (AI_PICKED ? "（" + t("model_picker.selected") + " 1）" : "");
 }
 function confirmModel(){
   if(AI_PICKED) $("ai_model").value = AI_PICKED;
@@ -863,9 +1127,9 @@ function confirmModel(){
 }
 async function fetchAiModels(silent){
   const url = aiModelsUrl();
-  if(!url){ if(!silent) toast("请先填 API 地址"); return; }
+  if(!url){ if(!silent) toast(t("msg.fill_api")); return; }
   const key = $("ai_key").value || aiSettings().key || "";
-  if(!silent) toast("正在拉取模型列表…");
+  if(!silent) toast(t("msg.fetching_models"));
   try{
     const headers = {};
     if(key) headers["Authorization"] = "Bearer " + key;
@@ -898,9 +1162,9 @@ function runAiAction(actionId){
   const a = AI_ACTIONS.find(x => x.id === actionId);
   if(!a) return;
   const s = aiSettings();
-  if(!s.endpoint || !s.key){ toast("请先配置 API 地址和 Key"); return; }
+  if(!s.endpoint || !s.key){ toast(t("msg.config_api_key")); return; }
   const content = $("f_body").value || "";
-  if(!content.trim()){ toast("正文为空，先写点东西"); return; }
+  if(!content.trim()){ toast(t("msg.empty_content")); return; }
   const prompt = (a.prompt || "").split("{{content}}").join(content);
   const url = s.endpoint.replace(/\/+$/, "") + "/chat/completions";
   const headers = JSON.stringify({
@@ -915,19 +1179,19 @@ function runAiAction(actionId){
     ]
   });
   $("aiResultWrap").style.display = "none";
-  toast("AI 思考中…");
+  toast(t("msg.ai_thinking"));
   try{ bridge().fetchPostText("ai", url, headers, body); }
   catch(e){ toast("请求失败：" + e); }
 }
 function onAiResult(raw){
   let r;
-  try{ r = JSON.parse(raw); }catch(e){ toast("解析失败"); return; }
+  try{ r = JSON.parse(raw); }catch(e){ toast(t("msg.parse_fail")); return; }
   if(!r || r.error || r.status !== 200){
     toast("AI 请求失败：" + escHtml((r && (r.error || ("HTTP " + r.status))) || "未知错误"));
     return;
   }
   let j;
-  try{ j = JSON.parse(r.body); }catch(e){ toast("解析失败"); return; }
+  try{ j = JSON.parse(r.body); }catch(e){ toast(t("msg.parse_fail")); return; }
   const text = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
   if(!text){ toast("AI 无返回：" + escHtml((j.error && j.error.message) || "未知错误")); return; }
   AI_LAST_RESULT = String(text).trim();
@@ -939,13 +1203,13 @@ function aiInsert(){
   const ta = $("f_body");
   const s = ta.selectionStart || 0, e = ta.selectionEnd || 0;
   ta.value = ta.value.slice(0, s) + AI_LAST_RESULT + ta.value.slice(e);
-  closeAi(); toast("已插入");
+  closeAi(); toast(t("msg.inserted"));
 }
 function aiReplace(){
   if(!AI_LAST_RESULT) return;
-  if(!confirm("用 AI 结果替换全文？")) return;
+  if(!confirm(t("msg.confirm_replace"))) return;
   $("f_body").value = AI_LAST_RESULT;
-  closeAi(); toast("已替换");
+  closeAi(); toast(t("msg.replaced"));
 }
 function aiCopy(){
   if(!AI_LAST_RESULT) return;
@@ -953,8 +1217,8 @@ function aiCopy(){
     const ta = document.createElement("textarea");
     ta.value = AI_LAST_RESULT; document.body.appendChild(ta);
     ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
-    toast("已复制");
-  }catch(e){ toast("复制失败"); }
+    toast(t("msg.copied"));
+  }catch(e){ toast(t("msg.copy_fail")); }
 }
 
 /* 扩展商店 */
@@ -1051,7 +1315,7 @@ function installAiPluginDl(name, file){
 let PENDING_AI_PLUGIN = null;
 function installPluginTyped(name, file, ptype){
   if(!/^[A-Za-z0-9_-]{1,64}$/.test(name) || !file || file.includes("..")){
-    toast("插件信息非法"); return;
+    toast(t("msg.plugin_invalid")); return;
   }
   const tag = ptype === "ai" ? "aifile" : "pluginfile";
   if(ptype === "ai") PENDING_AI_PLUGIN = {name: name};
@@ -1067,10 +1331,10 @@ function onAiFileFetched(raw){
   const p = PENDING_AI_PLUGIN; PENDING_AI_PLUGIN = null;
   if(!p) return;
   let r;
-  try{ r = JSON.parse(raw); }catch(e){ toast("下载失败：解析错误"); return; }
+  try{ r = JSON.parse(raw); }catch(e){ toast(t("msg.download_parse_fail")); return; }
   if(!r || r.error || r.status !== 200){ toast("下载失败：" + ((r && (r.error || ("HTTP " + r.status))) || "未知错误")); return; }
   const body = r.body || "";
-  if(!body.trim()){ toast("插件文件为空"); return; }
+  if(!body.trim()){ toast(t("msg.plugin_empty")); return; }
   withLoading(()=>{
     let rr;
     try{ rr = JSON.parse(bridge().installAiPlugin(p.name, body)); }
@@ -1112,10 +1376,10 @@ function onPluginFileFetched(raw){
   const p = PENDING_PLUGIN; PENDING_PLUGIN = null;
   if(!p) return;
   let r;
-  try{ r = JSON.parse(raw); }catch(e){ toast("下载失败：解析错误"); return; }
+  try{ r = JSON.parse(raw); }catch(e){ toast(t("msg.download_parse_fail")); return; }
   if(!r || r.error || r.status !== 200){ toast("下载失败：" + ((r && (r.error || ("HTTP " + r.status))) || "未知错误")); return; }
   const body = r.body || "";
-  if(!body.trim()){ toast("插件文件为空"); return; }
+  if(!body.trim()){ toast(t("msg.plugin_empty")); return; }
   withLoading(()=>{
     let rr;
     try{ rr = JSON.parse(bridge().installPluginFile(p.name, body)); }
@@ -1128,7 +1392,7 @@ function onPluginFileFetched(raw){
 function doSave(){
   let rel = $("f_rel").value.trim();
   const title = $("f_title").value.trim();
-  if(!rel || !title){ toast("标题和文件名不能为空"); return; }
+  if(!rel || !title){ toast(t("msg.title_file_required")); return; }
   if(rel.endsWith("/")){ rel = rel + slugify(title) + ".md"; $("f_rel").value = rel; }
   else if(!rel.toLowerCase().endsWith(".md")){ rel = rel + ".md"; $("f_rel").value = rel; }
   withLoading(()=>{
@@ -1172,7 +1436,7 @@ function openBuildDialog(){
 function closeBuildDialog(){ $("buildSheet").classList.remove("show"); }
 function doBuildProject(){
   const name = ($("buildName").value || "").trim();
-  if(!name){ toast("请输入项目名称"); return; }
+  if(!name){ toast(t("msg.input_project_name")); return; }
   let exists = false;
   try{
     const r = JSON.parse(bridge().listProjects());
@@ -1208,7 +1472,7 @@ function renderHomeThemes(){
   const themes = r.themes || [];
   if(!themes.length) return;
   $("homeThemes").innerHTML =
-    '<div style="font-size:13px;color:var(--muted);margin-bottom:6px">🎨 主题</div>' +
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:6px">' + t("home.theme") + '</div>' +
     '<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">' +
     themes.map(x => {
       const dot = (typeof THEME_DOTS !== "undefined" && THEME_DOTS[x.id]) || "#6b7280";
@@ -1265,7 +1529,7 @@ function openExport(){
   $("exportSheet").classList.add("show");
 }
 function doCleanBuild(){
-  if(!confirm("删除构建产物（public/）？文章、配置、主题不受影响。")) return;
+  if(!confirm(t("msg.confirm_clean"))) return;
   closeExport();
   withLoading(()=>{
     let r;
@@ -1290,7 +1554,7 @@ function refreshProjects(){
     try{ r = JSON.parse(bridge().listProjects()); }
     catch(e){ toast("读取失败："+e); return; }
     if(!r.ok){ toast(r.msg); return; }
-    $("filesTitle").innerHTML = '构建项目 <small id="filesTotal" style="color:var(--muted);font-weight:400"></small>';
+    $("filesTitle").innerHTML = t("files.title") + ' <small id="filesTotal" style="color:var(--muted);font-weight:400"></small>';
     const ps = r.projects || [];
     $("filesTotal").textContent = ps.length ? (ps.length + " 个项目") : "";
     if(!ps.length){
@@ -1355,7 +1619,7 @@ function doExportProject(){
     catch(e){ toast("导出失败："+e); return; }
     if(!r.ok){ toast(r.msg); return; }
     bridge().shareFile(r.path, r.name, "application/zip");
-    toast("正在打开分享…");
+    toast(t("msg.opening_share"));
   });
 }
 function doDeleteProjectFile(rel){
@@ -1388,7 +1652,7 @@ function checkUpdate(manual){
   UPD_MANUAL = manual; UPD_WAITING = true;
   loading(true);
   setTimeout(()=>{
-    if(UPD_WAITING){ UPD_WAITING = false; loading(false); if(UPD_MANUAL) toast("检查超时"); }
+    if(UPD_WAITING){ UPD_WAITING = false; loading(false); if(UPD_MANUAL) toast(t("msg.check_timeout")); }
   }, 30000);
   try{ bridge().fetchText("update", UPDATE_JSON_URL); }
   catch(e){ UPD_WAITING = false; loading(false); if(manual) toast("检查失败："+e); }
@@ -1403,15 +1667,15 @@ function onFetchText(tag, raw){
   UPD_WAITING = false; loading(false);
   const manual = UPD_MANUAL;
   let r;
-  try{ r = JSON.parse(raw); }catch(e){ if(manual) toast("解析失败"); return; }
+  try{ r = JSON.parse(raw); }catch(e){ if(manual) toast(t("msg.parse_fail")); return; }
   if(!r || r.error || r.status !== 200){
     if(manual) toast("检查失败：" + ((r && (r.error || ("HTTP " + r.status))) || "未知错误"));
     return;
   }
   let j;
-  try{ j = JSON.parse(r.body); }catch(e){ if(manual) toast("解析失败"); return; }
+  try{ j = JSON.parse(r.body); }catch(e){ if(manual) toast(t("msg.parse_fail")); return; }
   const latest = String(j.latest || "").replace(/^v/, "");
-  if(!latest){ if(manual) toast("没取到版本信息"); return; }
+  if(!latest){ if(manual) toast(t("msg.no_version")); return; }
   let cur = "";
   try{ cur = bridge().getAppVersion(); }catch(e){}
   if(cmpVer(latest, cur) > 0){
@@ -1457,7 +1721,7 @@ function doExportZip(save){
       toast(s.ok ? ("已保存到" + s.msg) : s.msg, 3200);
     }else{
       bridge().shareFile(r.path, "mssg-site.zip", "application/zip");
-      toast("正在打开分享…");
+      toast(t("msg.opening_share"));
     }
   });
 }
@@ -1542,7 +1806,7 @@ function doCfUseProject(name){
 }
 function doCfConnect(){
   const token = $("cfToken").value.trim();
-  if(!token){ toast("请先粘贴 API Token"); return; }
+  if(!token){ toast(t("msg.paste_token")); return; }
   withLoading(()=>{
     const r = cfCall("cfConnect", token);
     toast(r.ok ? ("已连接："+r.account_name) : r.msg, 3000);
@@ -1551,7 +1815,7 @@ function doCfConnect(){
 }
 function doCfSetAccount(){
   const id = $("cfAccountId").value.trim();
-  if(!id){ toast("请先粘贴 Account ID"); return; }
+  if(!id){ toast(t("msg.paste_account")); return; }
   withLoading(()=>{
     const r = cfCall("cfSetAccount", id);
     toast(r.ok ? "账号已设置" : r.msg, 3200);
@@ -1586,14 +1850,14 @@ function doCfDisconnect(){
 }
 function doSharePage(){
   const rel = $("f_rel").value.trim();
-  if(!rel){ toast("没有可分享的页面"); return; }
+  if(!rel){ toast(t("msg.no_share_page")); return; }
   withLoading(()=>{
     let r;
     try{ r = JSON.parse(bridge().exportPageHtml(rel)); }
     catch(e){ toast("导出失败："+e); return; }
     if(!r.ok){ toast(r.msg); return; }
     bridge().shareFile(r.path, r.name || "page.html", "text/html");
-    toast("正在打开分享…");
+    toast(t("msg.opening_share"));
   });
 }
 
@@ -1619,12 +1883,12 @@ function saveCss(){
   });
 }
 function clearCss(){
-  if(!confirm("清除自定义 CSS，恢复主题默认样式？")) return;
+  if(!confirm(t("msg.confirm_clear_css"))) return;
   withLoading(()=>{
     let r;
     try{ r = JSON.parse(bridge().clearCustomCss()); }
     catch(e){ toast("清除失败："+e); return; }
-    if(r.ok){ toast("已恢复默认"); openCssEditor(); }
+    if(r.ok){ toast(t("msg.css_restored")); openCssEditor(); }
     else toast(r.msg);
   });
 }

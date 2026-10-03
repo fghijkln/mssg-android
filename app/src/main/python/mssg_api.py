@@ -23,7 +23,15 @@ def _ok(**kw):
     return json.dumps(kw, ensure_ascii=False, default=str)
 
 
-def _fail(msg):
+_APP_LANG = "zh"
+
+def set_app_lang(lang: str) -> str:
+    global _APP_LANG
+    _APP_LANG = "en" if lang == "en" else "zh"
+    return _ok(lang=_APP_LANG)
+
+def _fail(zh, en=None):
+    msg = zh if _APP_LANG == "zh" else (en or zh)
     return json.dumps({"ok": False, "msg": str(msg)}, ensure_ascii=False)
 
 
@@ -31,7 +39,7 @@ def list_pages(site_dir: str) -> str:
     try:
         return _ok(pages=_app(site_dir)._list_pages())
     except Exception as e:
-        return _fail("读取失败：%s" % e)
+        return _fail("读取失败：%s" % e, "Read failed: %s" % e)
 
 
 def get_page(site_dir: str, rel: str) -> str:
@@ -43,7 +51,7 @@ def get_page(site_dir: str, rel: str) -> str:
         meta, body = _split_fm(path.read_text(encoding="utf-8"))
         return _ok(meta=meta if isinstance(meta, dict) else {}, body=body)
     except Exception as e:
-        return _fail("读取失败：%s" % e)
+        return _fail("读取失败：%s" % e, "Read failed: %s" % e)
 
 
 def save_page(
@@ -112,7 +120,7 @@ def list_themes() -> str:
             ]
         )
     except Exception as e:
-        return _fail("读取失败：%s" % e)
+        return _fail("读取失败：%s" % e, "Read failed: %s" % e)
 
 
 def get_theme(site_dir: str) -> str:
@@ -122,7 +130,7 @@ def get_theme(site_dir: str) -> str:
         theme = Site(site_dir).cfg["site"].get("theme", "company")
         return _ok(theme=theme)
     except Exception as e:
-        return _fail("读取失败：%s" % e)
+        return _fail("读取失败：%s" % e, "Read failed: %s" % e)
 
 
 def set_theme(site_dir: str, theme: str) -> str:
@@ -130,7 +138,7 @@ def set_theme(site_dir: str, theme: str) -> str:
         from mssg.site import Site
 
         if theme not in Site.available_themes():
-            return _fail("未知主题：%s" % theme)
+            return _fail("未知主题：%s" % theme, "Unknown theme: %s" % theme)
         toml_path = os.path.join(site_dir, "mssg.toml")
         with open(toml_path, encoding="utf-8") as f:
             text = f.read()
@@ -139,7 +147,7 @@ def set_theme(site_dir: str, theme: str) -> str:
             text, count=1, flags=re.M,
         )
         if n == 0:
-            return _fail("mssg.toml 里找不到 theme 配置项")
+            return _fail("mssg.toml 里找不到 theme 配置项", "theme not found in mssg.toml")
         with open(toml_path, "w", encoding="utf-8") as f:
             f.write(new_text)
         # 只换配置，不自动构建（用户手动点构建）
@@ -168,7 +176,7 @@ def export_zip(site_dir: str) -> str:
         msg = app._rebuild()
         public = _output_dir(site_dir)
         if not public.is_dir():
-            return _fail("构建输出不存在")
+            return _fail("构建输出不存在", "Build output not found")
         zip_path = Path(site_dir) / "mssg-site.zip"
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             for f in sorted(public.rglob("*")):
@@ -211,7 +219,7 @@ def clean_build(site_dir: str) -> str:
         public = _output_dir(site_dir)
         site = Path(site_dir).resolve()
         if public.resolve() == site:
-            return _fail("拒绝清空站点根目录")
+            return _fail("拒绝清空站点根目录", "Refusing to clear site root")
         shutil.rmtree(public, ignore_errors=True)
         return _ok()
     except Exception:
@@ -257,9 +265,9 @@ def delete_build_file(site_dir: str, rel: str) -> str:
         public = _output_dir(site_dir).resolve()
         target = (public / rel).resolve()
         if target != public and public not in target.parents:
-            return _fail("非法路径")
+            return _fail("非法路径", "Invalid path")
         if not target.is_file():
-            return _fail("文件不存在")
+            return _fail("文件不存在", "File not found")
         target.unlink()
         p = target.parent
         while p != public and p.is_dir() and not any(p.iterdir()):
@@ -284,10 +292,10 @@ def import_bundle_image(site_dir: str, tmp_path: str, rel: str) -> str:
         content_root = (site / "content").resolve()
         target_dir = (content_root / Path(rel).parent).resolve()
         if target_dir != content_root and content_root not in target_dir.parents:
-            return _fail("非法路径")
+            return _fail("非法路径", "Invalid path")
         tmp = Path(tmp_path)
         if not _images.is_image(tmp):
-            return _fail("不是图片文件")
+            return _fail("不是图片文件", "Not an image file")
         target_dir.mkdir(parents=True, exist_ok=True)
         name = "img-%s%s" % (time.strftime("%Y%m%d-%H%M%S"), tmp.suffix.lower())
         _images.copy_static_file(tmp, target_dir / name, 1600, 82)
@@ -419,9 +427,9 @@ def install_plugin_file(site_dir: str, name: str, content: str) -> str:
     用校验过的 name 构造，不信任远端的 install_to（防路径穿越）。"""
     try:
         if not _valid_plugin_name(name):
-            return _fail("非法插件名")
+            return _fail("非法插件名", "Invalid plugin name")
         if not content or not content.strip():
-            return _fail("插件文件为空")
+            return _fail("插件文件为空", "Plugin file is empty")
         d = Path(site_dir) / "templates" / "shortcodes"
         d.mkdir(parents=True, exist_ok=True)
         (d / (name + ".html")).write_text(content, encoding="utf-8")
@@ -434,7 +442,7 @@ def delete_plugin(site_dir: str, name: str) -> str:
     """删除已安装的插件。"""
     try:
         if not _valid_plugin_name(name):
-            return _fail("非法插件名")
+            return _fail("非法插件名", "Invalid plugin name")
         p = Path(site_dir) / "templates" / "shortcodes" / (name + ".html")
         if p.is_file():
             p.unlink()
@@ -511,7 +519,7 @@ def ai_create_site(parent_dir: str, spec_text: str) -> str:
                 else:
                     body_lines.append(line)
         if not pages:
-            return _fail("AI 没有返回有效页面")
+            return _fail("AI 没有返回有效页面", "AI returned no valid pages")
 
         target = Path(parent_dir) / "site-ai"
         if target.exists():
@@ -560,7 +568,7 @@ def ai_create_site(parent_dir: str, spec_text: str) -> str:
                           encoding="utf-8")
             count += 1
         if count == 0:
-            return _fail("AI 返回的页面都无效")
+            return _fail("AI 返回的页面都无效", "All AI-returned pages are invalid")
 
         from mssg.site import Site
         Site(str(target)).build()
@@ -587,7 +595,7 @@ def ai_promote_site(parent_dir: str) -> str:
         src = Path(parent_dir) / "site-ai"
         dst = Path(parent_dir) / "site"
         if not src.is_dir() or not (src / "mssg.toml").is_file():
-            return _fail("AI 站点不存在，请先生成")
+            return _fail("AI 站点不存在，请先生成", "AI site not found, generate first")
         # 只拷数据不保留权限（copytree 的 copystat 在手机上 Permission denied）
         _copy_data_only(src, dst)
         return _ok()
@@ -637,12 +645,12 @@ def build_project(site_dir: str, parent_dir: str, name: str) -> str:
     """构建站点并保存为项目（覆盖同名需 JS 先确认）。"""
     try:
         if not _valid_project_name(name):
-            return _fail("项目名非法（可用中文、字母、数字、下划线、连字符，最长 50）")
+            return _fail("项目名非法（可用中文、字母、数字、下划线、连字符，最长 50）", "Invalid project name (Chinese, letters, numbers, _, - allowed, max 50)")
         from mssg.site import Site
         Site(site_dir).build()
         src = _output_dir(site_dir)
         if not src.is_dir():
-            return _fail("构建没有产物")
+            return _fail("构建没有产物", "Build produced nothing")
         dst = _projects_dir(parent_dir) / name
         _copy_data_only(src, dst)
         files = [f for f in dst.rglob("*") if f.is_file()]
@@ -655,7 +663,7 @@ def list_project_files(parent_dir: str, name: str) -> str:
     """列出项目下的文件。"""
     try:
         if not _valid_project_name(name):
-            return _fail("项目名非法")
+            return _fail("项目名非法", "Invalid project name")
         pdir = _projects_dir(parent_dir) / name
         if not pdir.is_dir():
             return _ok(exists=False, files=[], count=0)
@@ -677,7 +685,7 @@ def delete_project(parent_dir: str, name: str) -> str:
     import shutil as _shutil
     try:
         if not _valid_project_name(name):
-            return _fail("项目名非法")
+            return _fail("项目名非法", "Invalid project name")
         pdir = _projects_dir(parent_dir) / name
         if pdir.is_dir():
             _shutil.rmtree(pdir)
@@ -691,11 +699,11 @@ def delete_project_file(parent_dir: str, name: str, rel: str) -> str:
     import shutil as _shutil
     try:
         if not _valid_project_name(name):
-            return _fail("项目名非法")
+            return _fail("项目名非法", "Invalid project name")
         pdir = _projects_dir(parent_dir) / name
         target = (pdir / rel).resolve()
         if pdir.resolve() not in target.parents and target != pdir.resolve():
-            return _fail("非法路径")
+            return _fail("非法路径", "Invalid path")
         if target.is_file():
             target.unlink()
         elif target.is_dir():
@@ -720,10 +728,10 @@ def export_project_zip(parent_dir: str, name: str) -> str:
         import zipfile as _zf
 
         if not _valid_project_name(name):
-            return _fail("项目名非法")
+            return _fail("项目名非法", "Invalid project name")
         pdir = _projects_dir(parent_dir) / name
         if not pdir.is_dir():
-            return _fail("项目不存在")
+            return _fail("项目不存在", "Project not found")
         stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         zip_path = Path(parent_dir) / ("%s-%s.zip" % (name, stamp))
         with _zf.ZipFile(zip_path, "w", _zf.ZIP_DEFLATED) as zf:
@@ -749,7 +757,7 @@ def export_page_html(site_dir: str, rel: str) -> str:
         url = prefix + base_rel[:-3] + ".html"
         html_path = _output_dir(site_dir) / url
         if not html_path.is_file():
-            return _fail("页面尚未生成：%s" % url)
+            return _fail("页面尚未生成：%s" % url, "Page not generated: %s" % url)
         return _ok(path=str(html_path), name=html_path.name)
     except Exception:
         return _fail(traceback.format_exc(limit=3))
@@ -773,7 +781,7 @@ def get_custom_css(site_dir: str) -> str:
         css = base.read_text(encoding="utf-8") if base.is_file() else ""
         return _ok(css=css, is_custom=False, theme=theme)
     except Exception as e:
-        return _fail("读取失败：%s" % e)
+        return _fail("读取失败：%s" % e, "Read failed: %s" % e)
 
 
 def save_custom_css(site_dir: str, css: str) -> str:
@@ -836,7 +844,7 @@ def cf_status(site_dir: str) -> str:
             project=c.get("project", ""),
         )
     except Exception as e:
-        return _fail("读取失败：%s" % e)
+        return _fail("读取失败：%s" % e, "Read failed: %s" % e)
 
 
 def cf_connect(site_dir: str, token: str) -> str:
@@ -850,7 +858,7 @@ def cf_connect(site_dir: str, token: str) -> str:
 
         token = (token or "").strip()
         if not token:
-            return _fail("Token 不能为空")
+            return _fail("Token 不能为空", "Token is required")
         info = cf.verify_token(token)
         if info.get("status") != "active":
             return _fail("Token 状态异常：%s" % info.get("status"))

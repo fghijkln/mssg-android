@@ -1,5 +1,5 @@
 {
-  "latest": "0.26.0",
-  "notes": "v0.26.0 插件宿主大改\n- APK 不再认识插件类型，只认 manifest 的 contributions 声明\n- 新增通用 listPlugins 接口；AI 面板经 PluginHost 渲染\n- 老插件（ai-writer/ai-coder）无需改动，自动兼容\n- 以后新插件只要声明 contributions，装上即用，不用再改 APK",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.26.0/app-release.apk"
+  "latest": "0.27.0",
+  "notes": "v0.27.0 中英双语\n- App 全界面中英切换（抽屉 🌐 按钮）\n- 主题模板跟随站点语言\n- 插件开发教程（中英）、英文 README",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.27.0/app-release.apk"
 }

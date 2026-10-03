@@ -424,6 +424,15 @@ public class ApiBridge {
      * contributions 声明完成。新增插件类型无需改 APK。
      */
     @JavascriptInterface
+    public String setAppLang(String lang) {
+        try {
+            return api().callAttr("set_app_lang", lang).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
     public String listPlugins() {
         try {
             JSONArray arr = new JSONArray();

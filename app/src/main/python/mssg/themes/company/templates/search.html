@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}搜索 - {{ site.title }}{% endblock %}
+{% block title %}{{ "Search" if lang == "en" else "搜索" }} - {{ site.title }}{% endblock %}
 {% block content %}
 <div class="wrap article">
-<h1>搜索</h1>
-<input id="q" class="search-box" placeholder="输入关键词…" autocomplete="off">
+<h1>{{ "Search" if lang == "en" else "搜索" }}</h1>
+<input id="q" class="search-box" placeholder="{{ "Enter keywords" if lang == "en" else "输入关键词" }}…" autocomplete="off">
 <div id="results" class="search-results"></div>
 </div>
 <script>
@@ -22,7 +22,7 @@ document.getElementById("q").addEventListener("input", e => {
   box.innerHTML = hits.length ? hits.map(h =>
     '<p><a href="/' + h.url + '">' + h.title.replace(/</g, "&lt;") +
     "</a><br><small>" + h.date + "</small></p>"
-  ).join("") : "<p>没有找到。</p>";
+  ).join("") : "<p>{{ "No results for" if lang == "en" else "没有找到" }}。</p>";
 });
 </script>
 {% endblock %}

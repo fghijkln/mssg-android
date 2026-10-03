@@ -38,8 +38,8 @@
 <main>{% block content %}{% endblock %}</main>
 <footer class="site-footer">
 <div class="wrap">
-<p>{{ site.footer.text }} · 由 mssg 生成</p>
-{% if site.contact.email %}<p>联系：<a href="mailto:{{ site.contact.email }}">{{ site.contact.email }}</a>{% if site.contact.phone %} · {{ site.contact.phone }}{% endif %}</p>{% endif %}
+<p>{{ site.footer.text }} · {{ "Powered by mssg" if lang == "en" else "由 mssg 生成" }}</p>
+{% if site.contact.email %}<p>{{ "Contact" if lang == "en" else "联系" }}：<a href="mailto:{{ site.contact.email }}">{{ site.contact.email }}</a>{% if site.contact.phone %} · {{ site.contact.phone }}{% endif %}</p>{% endif %}
 </div>
 </footer>
 </body>

@@ -6,14 +6,13 @@
 {{ page.content }}
 {% if site.form.endpoint %}
 <form class="contact-form" action="{{ site.form.endpoint }}" method="POST">
-<label>姓名<input type="text" name="name" required></label>
-<label>邮箱<input type="email" name="email" required></label>
-<label>留言<textarea name="message" rows="6" required></textarea></label>
-<button class="btn" type="submit">发送</button>
+<label>{{ "Name" if lang == "en" else "姓名" }}<input type="text" name="name" required></label>
+<label>{{ "Email" if lang == "en" else "邮箱" }}<input type="email" name="email" required></label>
+<label>{{ "Message" if lang == "en" else "留言" }}<textarea name="message" rows="6" required></textarea></label>
+<button class="btn" type="submit">{{ "Send" if lang == "en" else "发送" }}</button>
 </form>
 {% else %}
-<p class="hint">联系表单尚未配置：在 <code>mssg.toml</code> 的 <code>[site.form]</code>
-中填入 endpoint（如 Formspree）后重新构建即可启用。</p>
+<p class="hint">{% if lang == "en" %}Contact form not configured: add your endpoint (e.g. Formspree) under <code>[site.form]</code> in <code>mssg.toml</code> and rebuild.{% else %}联系表单尚未配置：在 <code>mssg.toml</code> 的 <code>[site.form]</code> 中填入 endpoint（如 Formspree）后重新构建即可启用。{% endif %}</p>
 {% endif %}
 </div>
 {% endblock %}

@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}归档 - {{ site.title }}{% endblock %}
+{% block title %}{{ "Archive" if lang == "en" else "归档" }} - {{ site.title }}{% endblock %}
 {% block content %}
 <div class="wrap doc">
-<h1>归档</h1>
+<h1>{{ "Archive" if lang == "en" else "归档" }}</h1>
 {% for g in groups %}
 <h2>{{ g.ym }}</h2>
 <ul class="list">
