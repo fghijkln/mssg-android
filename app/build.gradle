@@ -9,12 +9,12 @@ android {
         applicationId "com.mssg.app"
         minSdk 24
         targetSdk 34
-        versionCode 17
-        versionName "0.21.3"
+        versionCode 18
+        versionName "0.21.4"
 
         ndk {
-            // 主流手机全覆盖；x86_64 供模拟器用
-            abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
+            // 只留 ARM 真机；x86_64 仅模拟器用，白占约 13MB，已砍
+            abiFilters "arm64-v8a", "armeabi-v7a"
         }
 
         python {

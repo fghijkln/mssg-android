@@ -1,5 +1,5 @@
 {
-  "latest": "0.21.3",
-  "notes": "v0.21.3\n- 新建文章时文件名只填了目录（如 post/）会自动补上文件名；没写 .md 后缀的自动补上\n- 保存失败不再甩 traceback，只显示人话",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.21.3/mssg.apk"
+  "latest": "0.21.4",
+  "notes": "v0.21.4\n- APK 瘦身第一刀：砍掉 x86_64（仅模拟器用），体积 48MB→约 35MB",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.21.4/mssg.apk"
 }
