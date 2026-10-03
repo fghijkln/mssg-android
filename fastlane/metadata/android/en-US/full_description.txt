@@ -1,0 +1,11 @@
+WebWeave is a static site generator that runs entirely on your phone — no desktop computer needed.
+
+Describe the site you want in one sentence and the built-in AI assistant generates it; preview it on the phone, then export a ZIP or deploy to Cloudflare Pages.
+
+Features:
+* AI site builder and AI writing/coding assistants (requires your own OpenAI-compatible API key)
+* Plugin system with shortcodes
+* Markdown editor, themes, on-device site search
+* Backup/restore, Cloudflare Pages deployment
+
+WebWeave is free software, released under the MIT license. Cloudflare deployment and the AI features are optional and configured by the user; the core works fully offline.

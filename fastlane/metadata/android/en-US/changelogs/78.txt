@@ -1,0 +1,1 @@
+v0.27.5: JS popups now use native dialogs titled "WebWeave" with language-aware buttons.
