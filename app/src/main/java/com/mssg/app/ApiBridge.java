@@ -473,6 +473,74 @@ public class ApiBridge {
         });
     }
 
+    /**
+     * 从相册选一张图片，导入到文章的 page bundle 目录，并在光标处插入引用。
+     * 选择结果经 MainActivity.onActivityResult 回到 onImagePicked。
+     */
+    @JavascriptInterface
+    public void pickImage(String rel) {
+        if (rel == null || rel.trim().isEmpty()) {
+            toast("请先填写文件名，再插入图片");
+            return;
+        }
+        pendingImageRel = rel.trim();
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        try {
+            activity.startActivityForResult(intent, REQ_PICK_IMAGE);
+        } catch (Exception e) {
+            toast("打不开相册：" + e.getMessage());
+        }
+    }
+
+    /** 供 MainActivity.onActivityResult 调用；返回 true 表示已处理。 */
+    public boolean onImagePicked(int requestCode, int resultCode, Intent data) {
+        if (requestCode != REQ_PICK_IMAGE) return false;
+        if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
+            return true;
+        }
+        final Uri uri = data.getData();
+        final String rel = pendingImageRel;
+        new Thread(() -> {
+            File tmp = null;
+            try {
+                String ext = ".jpg";
+                try {
+                    String mime = activity.getContentResolver().getType(uri);
+                    if ("image/png".equals(mime)) ext = ".png";
+                    else if ("image/webp".equals(mime)) ext = ".webp";
+                    else if ("image/gif".equals(mime)) ext = ".gif";
+                } catch (Exception ignored) {}
+                tmp = File.createTempFile("pick", ext, activity.getCacheDir());
+                try (InputStream in = activity.getContentResolver().openInputStream(uri);
+                     OutputStream out = new FileOutputStream(tmp)) {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                }
+                String r = api().callAttr("import_bundle_image",
+                        siteDir, tmp.getAbsolutePath(), rel).toString();
+                JSONObject o = new JSONObject(r);
+                if (o.optBoolean("ok", false)) {
+                    final String js = "onImagePicked(" +
+                            JSONObject.quote(o.optString("name", "")) + ")";
+                    activity.runOnUiThread(() -> {
+                        try { wv.evaluateJavascript(js, null); }
+                        catch (Exception ignored) {}
+                    });
+                } else {
+                    toast(o.optString("msg", "图片处理失败"));
+                }
+            } catch (Exception e) {
+                toast("图片处理失败：" + e.getMessage());
+            } finally {
+                if (tmp != null) tmp.delete();
+            }
+        }).start();
+        return true;
+    }
+
     @JavascriptInterface
     public void openUrl(String url) {
         try {
