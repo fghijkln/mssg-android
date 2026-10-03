@@ -443,33 +443,87 @@ def delete_plugin(site_dir: str, name: str) -> str:
         return _fail(traceback.format_exc(limit=3))
 
 
-def ai_create_site(parent_dir: str, spec_json: str) -> str:
-    """AI 建站：按 spec JSON 在 <parent_dir>/site-ai/ 生成并构建，不碰当前站点。
+def ai_create_site(parent_dir: str, spec_text: str) -> str:
+    """AI 建站：按分隔符格式在 <parent_dir>/site-ai/ 生成并构建，不碰当前站点。
 
-    spec: {"site": {"title","description","theme"}, "pages": [{"path","title","body"}]}
+    格式：
+        @@@SITE@@@
+        title: 标题
+        description: 描述
+        theme: minimal
+        @@@PAGE@@@
+        path: content/_index.md
+        title: 首页
+        body:
+        Markdown 正文（多行，无需转义）
+        @@@PAGE@@@
+        ...
+        @@@END@@@
     """
-    import json as _json
     import shutil as _shutil
 
     try:
-        spec = _json.loads(spec_json)
-        site_cfg = spec.get("site") or {}
-        pages = spec.get("pages") or []
-        if not isinstance(pages, list) or not pages:
+        site = {"title": "我的网站", "description": "", "theme": "minimal"}
+        pages = []
+        cur = None
+        body_lines: list = []
+        in_body = False
+        section = None
+        for line in (spec_text or "").split("\n"):
+            s = line.strip()
+            if s == "@@@SITE@@@":
+                section = "site"
+                continue
+            if s == "@@@PAGE@@@":
+                if cur is not None:
+                    cur["body"] = "\n".join(body_lines).strip()
+                    if cur.get("path") and cur["body"]:
+                        pages.append(cur)
+                cur = {"path": "", "title": "", "body": ""}
+                body_lines = []
+                in_body = False
+                section = "page"
+                continue
+            if s == "@@@END@@@":
+                if cur is not None:
+                    cur["body"] = "\n".join(body_lines).strip()
+                    if cur.get("path") and cur["body"]:
+                        pages.append(cur)
+                break
+            if section == "site":
+                if ":" in line:
+                    k, _, v = line.partition(":")
+                    k = k.strip()
+                    if k in ("title", "description", "theme"):
+                        site[k] = v.strip()
+            elif section == "page" and cur is not None:
+                if not in_body:
+                    if line.startswith("body:"):
+                        in_body = True
+                        rest = line[5:].strip()
+                        if rest:
+                            body_lines.append(rest)
+                    elif ":" in line:
+                        k, _, v = line.partition(":")
+                        k = k.strip()
+                        if k in ("path", "title"):
+                            cur[k] = v.strip()
+                else:
+                    body_lines.append(line)
+        if not pages:
             return _fail("AI 没有返回有效页面")
 
         target = Path(parent_dir) / "site-ai"
         if target.exists():
             _shutil.rmtree(target)
-        # 用脚手架搭架子（主题/目录结构），再覆盖配置与内容
         from mssg.scaffold import new_site
         new_site(str(target))
 
-        theme = str(site_cfg.get("theme") or "minimal").strip()
+        theme = site.get("theme", "minimal").strip()
         if theme not in ("minimal", "company"):
             theme = "minimal"
-        title = str(site_cfg.get("title") or "我的网站").strip() or "我的网站"
-        desc = str(site_cfg.get("description") or "").strip()
+        title = site.get("title", "").strip() or "我的网站"
+        desc = site.get("description", "").strip()
 
         def _q(s: str) -> str:
             return '"%s"' % s.replace("\\", "\\\\").replace('"', '\\"')
@@ -484,7 +538,6 @@ def ai_create_site(parent_dir: str, spec_json: str) -> str:
         )
         (target / "mssg.toml").write_text(toml, encoding="utf-8")
 
-        # 清空示例内容，写入 AI 页面
         content_dir = target / "content"
         if content_dir.exists():
             _shutil.rmtree(content_dir)
@@ -492,21 +545,19 @@ def ai_create_site(parent_dir: str, spec_json: str) -> str:
 
         count = 0
         for pg in pages:
-            if not isinstance(pg, dict):
-                continue
-            rel = str(pg.get("path") or "").strip()
+            rel = pg["path"]
             if not rel.startswith("content/") or ".." in rel:
                 continue
             if not rel.endswith(".md"):
                 rel += ".md"
-            ptitle = str(pg.get("title") or "").strip()
-            body = str(pg.get("body") or "")
+            body = pg["body"]
             if not body.strip():
                 continue
             fp = target / rel
             fp.parent.mkdir(parents=True, exist_ok=True)
-            fm = "---\ntitle: %s\n---\n\n" % _q(ptitle or fp.stem)
-            fp.write_text(fm + body, encoding="utf-8")
+            ptitle = pg.get("title", "").strip() or fp.stem
+            fp.write_text("---\ntitle: %s\n---\n\n" % _q(ptitle) + body,
+                          encoding="utf-8")
             count += 1
         if count == 0:
             return _fail("AI 返回的页面都无效")

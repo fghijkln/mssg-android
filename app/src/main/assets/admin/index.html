@@ -571,17 +571,29 @@ function runAiBuild(){
   const s = aiSettings();
   if(!s.endpoint || !s.key){ toast("请先在 AI 助手里配置 API 地址和 Key"); closeAiBuild(); openAi(); return; }
   const themeHint = $("aiBuildTheme").value;
-  const sysPrompt = "你是一个静态网站生成器。根据用户的一句话描述，生成一个完整的网站。只返回 JSON，不要任何其他内容，不要 markdown 代码块标记。\n\n" +
-    "格式：\n" +
-    '{"site":{"title":"网站标题","description":"一句话描述","theme":"minimal"},' +
-    '"pages":[{"path":"content/_index.md","title":"页面标题","body":"Markdown 正文"}]}\n\n' +
+  const sysPrompt = "你是一个静态网站生成器。根据用户的一句话描述，生成一个完整的网站。\n\n" +
+    "按以下格式返回（分隔符行必须独占一行）：\n\n" +
+    "@@@SITE@@@\n" +
+    "title: 网站标题\n" +
+    "description: 一句话描述\n" +
+    "theme: minimal\n" +
+    "@@@PAGE@@@\n" +
+    "path: content/_index.md\n" +
+    "title: 首页\n" +
+    "body:\n" +
+    "Markdown 正文（多行，直接写，不用转义）\n" +
+    "@@@PAGE@@@\n" +
+    "path: content/about.md\n" +
+    "title: 关于\n" +
+    "body:\n" +
+    "Markdown 正文\n" +
+    "@@@END@@@\n\n" +
     "要求：\n" +
     "1. 生成 3-5 个页面，必须包含首页 content/_index.md\n" +
     "2. body 是 Markdown，内容充实，每页 300-800 字，用中文\n" +
     "3. theme 只能是 minimal 或 company" +
     (themeHint !== "auto" ? "，必须用 " + themeHint : "") + "\n" +
-    "4. path 必须以 content/ 开头、以 .md 结尾\n" +
-    "5. 只返回 JSON";
+    "4. body 里不要出现 @@@ 分隔符";
   const url = s.endpoint.replace(/\/+$/, "") + "/chat/completions";
   const headers = JSON.stringify({
     "Content-Type": "application/json",
@@ -618,13 +630,10 @@ function onAiBuildResult(raw){
   try{ j = JSON.parse(r.body); }catch(e){ toast("解析失败"); return; }
   const text = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
   if(!text){ toast("AI 无返回：" + escHtml((j.error && j.error.message) || "未知错误")); return; }
-  let spec;
-  try{ spec = JSON.parse(extractJson(text)); }
-  catch(e){ toast("AI 返回的不是有效 JSON，换个描述再试"); return; }
-  if(!spec.pages || !spec.pages.length){ toast("AI 没有生成页面"); return; }
+  if(text.indexOf("@@@PAGE@@@") < 0){ toast("AI 没有生成页面，换个描述再试"); return; }
   withLoading(()=>{
     let rr;
-    try{ rr = JSON.parse(bridge().aiCreateSite(JSON.stringify(spec))); }
+    try{ rr = JSON.parse(bridge().aiCreateSite(text)); }
     catch(e){ toast("建站失败：" + e); return; }
     if(!rr.ok){ toast("建站失败：" + rr.msg); return; }
     $("aiBuildMsg").innerHTML = "已生成 <b>" + escHtml(rr.title || "") + "</b>，" +
