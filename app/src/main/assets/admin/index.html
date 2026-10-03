@@ -652,10 +652,11 @@ function onAiBuildResult(raw){
     catch(e){ toast("建站失败：" + e); return; }
     if(!rr.ok){ toast("建站失败：" + rr.msg); return; }
     $("aiBuildMsg").innerHTML = "已生成 <b>" + escHtml(rr.title || "") + "</b>，" +
-      rr.pages + " 个页面。正在打开预览…返回后可点「设为我的站点」。";
+      rr.pages + " 个页面，已存为项目「" + escHtml(rr.project || "") + "」。正在打开预览…返回后可点「设为我的站点」。";
     $("aiBuildResult").style.display = "block";
     toast("建站完成，正在打开预览");
-    setTimeout(()=>{ try{ bridge().previewAiSite(); }catch(e){ toast("预览失败：" + e); } }, 800);
+    const proj = rr.project || "";
+    setTimeout(()=>{ try{ bridge().previewProject(proj); }catch(e){ toast("预览失败：" + e); } }, 800);
   });
 }
 function aiPreview(){
@@ -1149,8 +1150,9 @@ function refreshProjectFiles(){
     $("filesTitle").innerHTML = '<button class="btn ghost sm" onclick="refreshProjects()" style="margin-right:8px">‹ 项目</button>' +
       esc(name) + ' <small id="filesTotal" style="color:var(--muted);font-weight:400"></small>';
     $("filesTotal").textContent = r.exists ? (r.count + " 个文件，共 " + r.total_human) : "";
-    let html = '<div style="display:flex;gap:8px;margin-bottom:10px">' +
-      '<button class="btn sm" onclick="bridge().previewProject(\'' + name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">👁 预览</button></div>';
+    let html = '<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">' +
+      '<button class="btn sm" onclick="bridge().previewProject(\'' + name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">👁 预览</button>' +
+      '<button class="btn sm" onclick="doExportProject()">📤 导出 ZIP</button></div>';
     if(!r.exists || !r.files.length){
       $("filesList").innerHTML = html + '<div style="color:var(--muted);padding:18px 4px">空项目</div>';
       return;
@@ -1162,6 +1164,16 @@ function refreshProjectFiles(){
         '<button class="btn ghost" style="padding:4px 8px;flex-shrink:0" onclick="doDeleteProjectFile(\'' + f.path.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">删</button>' +
       '</div>'
     ).join("");
+  });
+}
+function doExportProject(){
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().exportProjectZip(CUR_PROJECT)); }
+    catch(e){ toast("导出失败："+e); return; }
+    if(!r.ok){ toast(r.msg); return; }
+    bridge().shareFile(r.path, r.name, "application/zip");
+    toast("正在打开分享…");
   });
 }
 function doDeleteProjectFile(rel){

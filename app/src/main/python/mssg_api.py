@@ -564,7 +564,19 @@ def ai_create_site(parent_dir: str, spec_text: str) -> str:
 
         from mssg.site import Site
         Site(str(target)).build()
-        return _ok(pages=count, title=title, theme=theme)
+
+        # 自动存为项目（用站点标题命名，重复则加后缀）
+        import re as _re2
+        pname = _re2.sub(r"[^A-Za-z0-9_\-\u4e00-\u9fa5]", "", title).strip()[:30]
+        if not pname:
+            pname = "AI站点"
+        pdir = _projects_dir(parent_dir)
+        base, i = pname, 2
+        while (pdir / pname).exists():
+            pname = "%s-%d" % (base, i)
+            i += 1
+        _copy_data_only(target / "public", pdir / pname)
+        return _ok(pages=count, title=title, theme=theme, project=pname)
     except Exception:
         return _fail(traceback.format_exc(limit=3))
 
@@ -697,6 +709,28 @@ def delete_project_file(parent_dir: str, name: str, rel: str) -> str:
             except OSError:
                 break
         return _ok()
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def export_project_zip(parent_dir: str, name: str) -> str:
+    """导出项目构建产物为 ZIP，返回 zip 路径（供分享）。"""
+    try:
+        import datetime
+        import zipfile as _zf
+
+        if not _valid_project_name(name):
+            return _fail("项目名非法")
+        pdir = _projects_dir(parent_dir) / name
+        if not pdir.is_dir():
+            return _fail("项目不存在")
+        stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        zip_path = Path(parent_dir) / ("%s-%s.zip" % (name, stamp))
+        with _zf.ZipFile(zip_path, "w", _zf.ZIP_DEFLATED) as zf:
+            for f in sorted(pdir.rglob("*")):
+                if f.is_file():
+                    zf.write(f, f.relative_to(pdir).as_posix())
+        return _ok(path=str(zip_path), name=zip_path.name)
     except Exception:
         return _fail(traceback.format_exc(limit=3))
 

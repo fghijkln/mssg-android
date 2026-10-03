@@ -1,5 +1,5 @@
 {
-  "latest": "0.25.0",
-  "notes": "v0.25.0\n- 构建项目：点构建先输入项目名，产物按项目存档；新名字新建，旧名字覆盖（二次确认）；构建项目里可看文件、预览、删除",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.25.0/mssg.apk"
+  "latest": "0.25.1",
+  "notes": "v0.25.1\n- AI 建站自动存为项目（用站点标题命名）；项目可导出 ZIP 分享",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.25.1/mssg.apk"
 }

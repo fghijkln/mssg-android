@@ -574,6 +574,15 @@ public class ApiBridge {
     }
 
     @JavascriptInterface
+    public String exportProjectZip(String name) {
+        try {
+            return api().callAttr("export_project_zip", parentDir(), name).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
     public void previewProject(String name) {
         Intent intent = new Intent(activity, PreviewActivity.class);
         intent.putExtra("publicDir", parentDir() + "/projects/" + name);
