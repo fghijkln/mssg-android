@@ -1,12 +1,17 @@
 package com.mssg.app;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.webkit.JsPromptResult;
+import android.webkit.JsResult;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebChromeClient;
 import android.webkit.WebViewClient;
+import android.widget.EditText;
 
 import com.chaquo.python.Python;
 import com.chaquo.python.android.AndroidPlatform;
@@ -51,8 +56,53 @@ public class MainActivity extends Activity {
             py.getModule("mssg_api").callAttr("cf_enable_webview_transport", bridge);
         } catch (Exception ignored) {}
         wv.setWebViewClient(new WebViewClient());
-        // 让 JS 的 confirm()/alert() 能弹窗（删除文章/清除构建产物用）
-        wv.setWebChromeClient(new WebChromeClient());
+        // JS 的 confirm()/alert()/prompt() 用原生对话框：标题显示应用名而不是
+        // 系统默认的 "网址为 file:// 的网页显示："，按钮跟随 App 语言
+        wv.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("WebWeave")
+                        .setMessage(message)
+                        .setPositiveButton(bridge.tr("确定", "OK"),
+                                (d, w) -> result.confirm())
+                        .setCancelable(false)
+                        .show();
+                return true;
+            }
+
+            @Override
+            public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("WebWeave")
+                        .setMessage(message)
+                        .setPositiveButton(bridge.tr("确定", "OK"),
+                                (d, w) -> result.confirm())
+                        .setNegativeButton(bridge.tr("取消", "Cancel"),
+                                (d, w) -> result.cancel())
+                        .setCancelable(false)
+                        .show();
+                return true;
+            }
+
+            @Override
+            public boolean onJsPrompt(WebView view, String url, String message,
+                                      String defaultValue, JsPromptResult result) {
+                final EditText input = new EditText(MainActivity.this);
+                input.setText(defaultValue);
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("WebWeave")
+                        .setMessage(message)
+                        .setView(input)
+                        .setPositiveButton(bridge.tr("确定", "OK"),
+                                (d, w) -> result.confirm(input.getText().toString()))
+                        .setNegativeButton(bridge.tr("取消", "Cancel"),
+                                (d, w) -> result.cancel())
+                        .setCancelable(false)
+                        .show();
+                return true;
+            }
+        });
         wv.loadUrl("file:///android_asset/admin/index.html");
     }
 

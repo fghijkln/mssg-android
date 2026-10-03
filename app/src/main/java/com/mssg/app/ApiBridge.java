@@ -43,7 +43,7 @@ public class ApiBridge {
 
     // App 界面语言（JS setAppLang 同步），Java 侧 toast 双语用
     private String appLang = "zh";
-    private String tr(String zh, String en) {
+    String tr(String zh, String en) {
         return "en".equals(appLang) ? en : zh;
     }
 
