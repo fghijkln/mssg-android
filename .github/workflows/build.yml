@@ -34,6 +34,24 @@ jobs:
 
       # 固定签名：debug keystore 每次 CI 都是新的，会导致用户无法覆盖安装；
       # release 构建改用仓库 Secrets 里的固定 keystore。
+      # 桥接一致性检查：JS 调 bridge().xxx() 必须在 Java 有 @JavascriptInterface
+      # 方法，Java callAttr("yyy") 必须在 Python 有对应函数。防 v0.22.0 漏 Java 层。
+      - name: Check bridge consistency
+        run: |
+          python3 - <<'EOF'
+          import re
+          js = open("app/src/main/assets/admin/index.html", encoding="utf-8").read()
+          java = open("app/src/main/java/com/mssg/app/ApiBridge.java", encoding="utf-8").read()
+          py = open("app/src/main/python/mssg_api.py", encoding="utf-8").read()
+          js_calls = set(re.findall(r'bridge\(\)\.(\w+)\(', js))
+          java_methods = set(re.findall(r'public (?:String|void) (\w+)\(', java))
+          py_calls = set(re.findall(r'callAttr\("(\w+)"', java))
+          py_defs = set(re.findall(r'^def (\w+)\(', py, re.M))
+          missing = (js_calls - java_methods) | (py_calls - py_defs)
+          assert not missing, f"桥接缺失: {missing}"
+          print(f"桥接一致: JS {len(js_calls)} / Java {len(java_methods)} / Python {len(py_defs)}")
+          EOF
+
       - name: Restore release keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
