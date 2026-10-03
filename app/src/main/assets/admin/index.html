@@ -216,6 +216,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
         <button type="button" onclick="mdLinePrefix('- ')" title="列表">☰</button>
         <button type="button" onclick="mdLinePrefix('> ')" title="引用">❝</button>
         <button type="button" onclick="mdWrap('`','`','代码')" title="行内代码">‹›</button>
+        <button type="button" onclick="openAi()" title="AI 写作助手">🤖</button>
       </div>
       <textarea id="f_body" placeholder="# 标题&#10;&#10;正文…"></textarea>
     </div>
@@ -261,6 +262,29 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
       <span>📤</span><span>分享 ZIP<br><small style="color:var(--muted)">通过微信 / 邮件 / 云盘发送</small></span>
     </button>
     <div style="font-size:13px;color:var(--muted);margin:0 4px 8px">更多操作（部署、备份、构建文件、检查更新）已移到左上角 ☰ 菜单</div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="aiSheet" onclick="if(event.target===this)closeAi()">
+  <div class="sheet" style="max-height:86vh;display:flex;flex-direction:column">
+    <h3>🤖 AI 写作助手</h3>
+    <div id="aiActions" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+    <div id="aiResultWrap" style="display:none;margin-bottom:10px">
+      <div class="field"><label>结果</label>
+        <div id="aiResult" style="border:1px solid var(--input-border);background:var(--card);border-radius:12px;padding:12px 14px;max-height:30vh;overflow-y:auto;white-space:pre-wrap;font-size:15px"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" onclick="aiInsert()">插入到光标</button>
+        <button class="btn sm" onclick="aiReplace()">替换全文</button>
+        <button class="btn ghost sm" onclick="aiCopy()">复制</button>
+      </div>
+    </div>
+    <div class="drawer-sec">接口设置 <small style="color:var(--muted)">兼容 OpenAI 格式</small></div>
+    <div class="field"><label>API 地址</label><input type="text" id="ai_endpoint" placeholder="https://api.deepseek.com/v1"></div>
+    <div class="field"><label>API Key</label><input type="password" id="ai_key" placeholder="sk-…"></div>
+    <div class="field"><label>模型</label><input type="text" id="ai_model" placeholder="deepseek-chat"></div>
+    <button class="btn" onclick="saveAiSettings()" style="margin-bottom:8px">保存设置</button>
+    <button class="btn ghost" onclick="closeAi()">关闭</button>
   </div>
 </div>
 
@@ -507,6 +531,128 @@ function slugify(s){
     .replace(/-+/g, "-").replace(/^-|-$/g, "");
   return slug || ("post-" + Date.now().toString(36));
 }
+/* AI 写作助手 */
+const DEFAULT_AI_ACTIONS = [
+  {id:"continue", label:"✍️ 续写", system:"你是一个写作助手，直接输出内容，不要解释。",
+   prompt:"请续写下面的文章，保持原有的语言风格和语气，直接输出续写的内容：\n\n{{content}}"},
+  {id:"polish", label:"✨ 润色", system:"你是一个文字编辑，直接输出润色后的全文，不要解释。",
+   prompt:"请润色下面的文章，修正错别字和病句，优化表达，保持原意和结构，直接输出润色后的全文：\n\n{{content}}"},
+  {id:"expand", label:"📝 扩写", system:"你是一个写作助手，直接输出内容，不要解释。",
+   prompt:"请扩写下面的内容，增加细节和例子，保持主题一致，直接输出扩写后的内容：\n\n{{content}}"},
+  {id:"title", label:"📌 起标题", system:"你是一个标题高手，直接输出标题，每行一个，不要多余内容。",
+   prompt:"请为下面的文章起 5 个吸引人的标题，每行一个：\n\n{{content}}"},
+  {id:"summary", label:"📄 写摘要", system:"你是一个编辑，直接输出摘要，不要解释。",
+   prompt:"请为下面的文章写一段 100 字左右的摘要：\n\n{{content}}"},
+];
+let AI_ACTIONS = DEFAULT_AI_ACTIONS;
+let AI_LAST_RESULT = "";
+function aiSettings(){
+  try{
+    const r = JSON.parse(bridge().getAiSettings());
+    if(r.ok) return r;
+  }catch(e){}
+  return {endpoint:"", key:"", model:""};
+}
+function openAi(){
+  const s = aiSettings();
+  $("ai_endpoint").value = s.endpoint || "";
+  $("ai_key").value = s.key || "";
+  $("ai_model").value = s.model || "";
+  $("aiResultWrap").style.display = "none";
+  AI_LAST_RESULT = "";
+  loadAiActions();
+  $("aiSheet").classList.add("show");
+}
+function closeAi(){ $("aiSheet").classList.remove("show"); }
+function loadAiActions(){
+  AI_ACTIONS = DEFAULT_AI_ACTIONS;
+  try{
+    const r = JSON.parse(bridge().listAiPlugins());
+    if(r.ok && r.plugins && r.plugins.length){
+      const p = JSON.parse(bridge().getAiPlugin(r.plugins[0].name));
+      if(p.ok){
+        const j = JSON.parse(p.content);
+        if(j.actions && j.actions.length) AI_ACTIONS = j.actions;
+      }
+    }
+  }catch(e){}
+  $("aiActions").innerHTML = AI_ACTIONS.map(a =>
+    '<button class="btn sm" onclick="runAiAction(\'' + a.id.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">' +
+    escHtml(a.label || a.id) + '</button>').join("");
+}
+function saveAiSettings(){
+  withLoading(()=>{
+    let r;
+    try{
+      r = JSON.parse(bridge().setAiSettings(
+        $("ai_endpoint").value, $("ai_key").value, $("ai_model").value));
+    }catch(e){ toast("保存失败：" + e); return; }
+    toast(r.ok ? "已保存" : r.msg);
+  });
+}
+function runAiAction(actionId){
+  const a = AI_ACTIONS.find(x => x.id === actionId);
+  if(!a) return;
+  const s = aiSettings();
+  if(!s.endpoint || !s.key){ toast("请先配置 API 地址和 Key"); return; }
+  const content = $("f_body").value || "";
+  if(!content.trim()){ toast("正文为空，先写点东西"); return; }
+  const prompt = (a.prompt || "").split("{{content}}").join(content);
+  const url = s.endpoint.replace(/\/+$/, "") + "/chat/completions";
+  const headers = JSON.stringify({
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + s.key
+  });
+  const body = JSON.stringify({
+    model: s.model || "gpt-3.5-turbo",
+    messages: [
+      {role:"system", content: a.system || "你是一个写作助手。"},
+      {role:"user", content: prompt}
+    ]
+  });
+  $("aiResultWrap").style.display = "none";
+  toast("AI 思考中…");
+  try{ bridge().fetchPostText("ai", url, headers, body); }
+  catch(e){ toast("请求失败：" + e); }
+}
+function onAiResult(raw){
+  let r;
+  try{ r = JSON.parse(raw); }catch(e){ toast("解析失败"); return; }
+  if(!r || r.error || r.status !== 200){
+    toast("AI 请求失败：" + escHtml((r && (r.error || ("HTTP " + r.status))) || "未知错误"));
+    return;
+  }
+  let j;
+  try{ j = JSON.parse(r.body); }catch(e){ toast("解析失败"); return; }
+  const text = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+  if(!text){ toast("AI 无返回：" + escHtml((j.error && j.error.message) || "未知错误")); return; }
+  AI_LAST_RESULT = String(text).trim();
+  $("aiResult").textContent = AI_LAST_RESULT;
+  $("aiResultWrap").style.display = "block";
+}
+function aiInsert(){
+  if(!AI_LAST_RESULT) return;
+  const ta = $("f_body");
+  const s = ta.selectionStart || 0, e = ta.selectionEnd || 0;
+  ta.value = ta.value.slice(0, s) + AI_LAST_RESULT + ta.value.slice(e);
+  closeAi(); toast("已插入");
+}
+function aiReplace(){
+  if(!AI_LAST_RESULT) return;
+  if(!confirm("用 AI 结果替换全文？")) return;
+  $("f_body").value = AI_LAST_RESULT;
+  closeAi(); toast("已替换");
+}
+function aiCopy(){
+  if(!AI_LAST_RESULT) return;
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = AI_LAST_RESULT; document.body.appendChild(ta);
+    ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+    toast("已复制");
+  }catch(e){ toast("复制失败"); }
+}
+
 /* 扩展商店 */
 const PLUGINS_JSON_URL = "https://raw.githubusercontent.com/fghijkln/mssg-plugins/master/plugins.json";
 const PLUGINS_BASE = "https://raw.githubusercontent.com/fghijkln/mssg-plugins/master/";
@@ -532,7 +678,12 @@ function refreshPlugins(){
     if(r.ok) installed = r.plugins || [];
     else toast(r.msg);
   }catch(e){ toast("读取已安装插件失败：" + e); }
-  renderInstalledPlugins(installed);
+  let aiInstalled = [];
+  try{
+    const r = JSON.parse(bridge().listAiPlugins());
+    if(r.ok) aiInstalled = r.plugins || [];
+  }catch(e){}
+  renderInstalledPlugins(installed, aiInstalled);
   if(PLUGINS_CACHE){ renderAvailablePlugins(PLUGINS_CACHE, installed); }
   else{
     $("pluginAvailable").innerHTML = '<div style="color:var(--muted);font-size:14px">正在加载插件列表…</div>';
@@ -540,38 +691,89 @@ function refreshPlugins(){
     catch(e){ $("pluginAvailable").innerHTML = '<div style="color:var(--danger);font-size:14px">加载失败：' + escHtml(e) + '</div>'; }
   }
 }
-function renderInstalledPlugins(list){
+function renderInstalledPlugins(list, aiList){
   const el = $("pluginInstalled");
-  if(!list.length){ el.innerHTML = '<div style="color:var(--muted);font-size:14px">暂无已安装插件</div>'; return; }
-  el.innerHTML = list.map(p =>
+  aiList = aiList || [];
+  const rows = list.map(p =>
     '<div class="plugin-row"><span>🧩 ' + escHtml(p.name) + '</span>' +
     '<button class="btn danger-btn sm" onclick="deletePlugin(\'' + p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">删除</button></div>'
-  ).join("");
+  );
+  aiList.forEach(p => {
+    rows.push('<div class="plugin-row"><span>🤖 ' + escHtml(p.name) +
+      ' <small style="color:var(--muted)">' + p.actionCount + ' 个动作</small></span>' +
+      '<button class="btn danger-btn sm" onclick="deleteAiPlugin(\'' + p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">删除</button></div>');
+  });
+  el.innerHTML = rows.length ? rows.join("")
+    : '<div style="color:var(--muted);font-size:14px">暂无已安装插件</div>';
+}
+function deleteAiPlugin(name){
+  if(!confirm("删除 AI 插件「" + name + "」？")) return;
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().deleteAiPlugin(name)); }
+    catch(e){ toast("删除失败：" + e); return; }
+    toast(r.ok ? "已删除" : r.msg);
+    if(r.ok) refreshPlugins();
+  });
 }
 function renderAvailablePlugins(plugins, installed){
   const el = $("pluginAvailable");
   const names = new Set(installed.map(p => p.name));
+  try{
+    const r = JSON.parse(bridge().listAiPlugins());
+    if(r.ok) (r.plugins || []).forEach(p => names.add(p.name));
+  }catch(e){}
   el.innerHTML = (plugins || []).map(p => {
     const done = names.has(p.name);
     const file = (p.files && p.files[0]) || "";
     return '<div class="plugin-row"><span><b>' + escHtml(p.name) + '</b> ' +
       '<small style="color:var(--muted)">' + escHtml(p.version || "") + '</small><br>' +
-      '<small style="color:var(--muted)">' + escHtml(p.description || "") + '</small></span>' +
+      '<small style="color:var(--muted)">' + escHtml(p.description || "") + '</small>' +
+      (p.type === "ai" ? ' <small style="color:var(--ok)">[AI]</small>' : '') + '</span>' +
       (done ? '<span style="color:var(--ok);font-size:14px">已安装</span>'
-        : '<button class="btn sm" onclick="installPlugin(\'' +
+        : '<button class="btn sm" onclick="' + (p.type === "ai" ? "installAiPluginDl" : "installPlugin") + '(\'' +
           p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\',\'' +
-          file.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">安装</button>') +
+          file.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">' +
+          (p.type === "ai" ? "🤖 " : "") + '安装</button>') +
       '</div>';
   }).join("") || '<div style="color:var(--muted);font-size:14px">暂无插件</div>';
 }
 function installPlugin(name, file){
+  installPluginTyped(name, file, "shortcode");
+}
+function installAiPluginDl(name, file){
+  installPluginTyped(name, file, "ai");
+}
+let PENDING_AI_PLUGIN = null;
+function installPluginTyped(name, file, ptype){
   if(!/^[A-Za-z0-9_-]{1,64}$/.test(name) || !file || file.includes("..")){
     toast("插件信息非法"); return;
   }
-  PENDING_PLUGIN = {name: name};
+  const tag = ptype === "ai" ? "aifile" : "pluginfile";
+  if(ptype === "ai") PENDING_AI_PLUGIN = {name: name};
+  else PENDING_PLUGIN = {name: name};
   toast("正在下载 " + name + "…");
-  try{ bridge().fetchText("pluginfile", PLUGINS_BASE + file); }
-  catch(e){ PENDING_PLUGIN = null; toast("下载失败：" + e); }
+  try{ bridge().fetchText(tag, PLUGINS_BASE + file); }
+  catch(e){
+    if(ptype === "ai") PENDING_AI_PLUGIN = null; else PENDING_PLUGIN = null;
+    toast("下载失败：" + e);
+  }
+}
+function onAiFileFetched(raw){
+  const p = PENDING_AI_PLUGIN; PENDING_AI_PLUGIN = null;
+  if(!p) return;
+  let r;
+  try{ r = JSON.parse(raw); }catch(e){ toast("下载失败：解析错误"); return; }
+  if(!r || r.error || r.status !== 200){ toast("下载失败：" + ((r && (r.error || ("HTTP " + r.status))) || "未知错误")); return; }
+  const body = r.body || "";
+  if(!body.trim()){ toast("插件文件为空"); return; }
+  withLoading(()=>{
+    let rr;
+    try{ rr = JSON.parse(bridge().installAiPlugin(p.name, body)); }
+    catch(e){ toast("安装失败：" + e); return; }
+    toast(rr.ok ? ("已安装 " + p.name) : ("安装失败：" + rr.msg));
+    if(rr.ok) refreshPlugins();
+  });
 }
 function deletePlugin(name){
   if(!confirm("删除插件「" + name + "」？")) return;
@@ -790,6 +992,8 @@ function checkUpdate(manual){
 function onFetchText(tag, raw){
   if(tag === "plugins"){ onPluginsFetched(raw); return; }
   if(tag === "pluginfile"){ onPluginFileFetched(raw); return; }
+  if(tag === "ai"){ onAiResult(raw); return; }
+  if(tag === "aifile"){ onAiFileFetched(raw); return; }
   if(tag !== "update" || !UPD_WAITING) return;
   UPD_WAITING = false; loading(false);
   const manual = UPD_MANUAL;

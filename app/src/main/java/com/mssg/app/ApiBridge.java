@@ -347,6 +347,153 @@ public class ApiBridge {
         }).start();
     }
 
+    /* AI 写作助手 */
+    @JavascriptInterface
+    public String getAiSettings() {
+        try {
+            android.content.SharedPreferences sp =
+                    activity.getSharedPreferences("mssg", android.content.Context.MODE_PRIVATE);
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            o.put("endpoint", sp.getString("ai_endpoint", ""));
+            o.put("key", sp.getString("ai_key", ""));
+            o.put("model", sp.getString("ai_model", ""));
+            return o.toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String setAiSettings(String endpoint, String key, String model) {
+        try {
+            android.content.SharedPreferences sp =
+                    activity.getSharedPreferences("mssg", android.content.Context.MODE_PRIVATE);
+            sp.edit()
+                    .putString("ai_endpoint", endpoint == null ? "" : endpoint.trim())
+                    .putString("ai_key", key == null ? "" : key.trim())
+                    .putString("ai_model", model == null ? "" : model.trim())
+                    .apply();
+            return "{\"ok\":true}";
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    /** AI 接口 POST（OpenAI 兼容），经 WebView Chromium 网络栈，走 onFetchText(tag) 回调。 */
+    @JavascriptInterface
+    public void fetchPostText(String tag, String url, String headersJson, String bodyJson) {
+        new Thread(() -> {
+            String raw;
+            try {
+                String bodyB64 = Base64.encodeToString(
+                        bodyJson.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        Base64.NO_WRAP);
+                raw = cfFetchSync("POST", url, headersJson, bodyB64, 90);
+            } catch (Exception e) {
+                raw = "{\"error\":\"" + e.toString().replace("\"", "'") + "\"}";
+            }
+            final String result = raw;
+            activity.runOnUiThread(() -> {
+                try {
+                    wv.evaluateJavascript("onFetchText(" + JSONObject.quote(tag) + ","
+                            + JSONObject.quote(result) + ")", null);
+                } catch (Exception ignored) {}
+            });
+        }).start();
+    }
+
+    private java.io.File aiPluginDir() {
+        return new java.io.File(activity.getFilesDir(), "ai_plugins");
+    }
+
+    private boolean validAiName(String name) {
+        return name != null && name.matches("[A-Za-z0-9_-]{1,64}");
+    }
+
+    @JavascriptInterface
+    public String listAiPlugins() {
+        try {
+            JSONArray arr = new JSONArray();
+            java.io.File dir = aiPluginDir();
+            if (dir.isDirectory()) {
+                java.io.File[] files = dir.listFiles((d, n) -> n.endsWith(".json"));
+                if (files != null) {
+                    for (java.io.File f : files) {
+                        try {
+                            String c = new String(
+                                    java.nio.file.Files.readAllBytes(f.toPath()),
+                                    java.nio.charset.StandardCharsets.UTF_8);
+                            JSONObject j = new JSONObject(c);
+                            JSONObject o = new JSONObject();
+                            o.put("name", j.optString("name",
+                                    f.getName().replace(".json", "")));
+                            o.put("description", j.optString("description", ""));
+                            o.put("version", j.optString("version", ""));
+                            JSONArray acts = j.optJSONArray("actions");
+                            o.put("actionCount", acts != null ? acts.length() : 0);
+                            arr.put(o);
+                        } catch (Exception ignored) {}
+                    }
+                }
+            }
+            JSONObject r = new JSONObject();
+            r.put("ok", true);
+            r.put("plugins", arr);
+            return r.toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String getAiPlugin(String name) {
+        try {
+            if (!validAiName(name)) return fail(new Exception("非法插件名"));
+            java.io.File f = new java.io.File(aiPluginDir(), name + ".json");
+            if (!f.isFile()) return fail(new Exception("插件不存在"));
+            String c = new String(java.nio.file.Files.readAllBytes(f.toPath()),
+                    java.nio.charset.StandardCharsets.UTF_8);
+            new JSONObject(c); // 校验
+            JSONObject r = new JSONObject();
+            r.put("ok", true);
+            r.put("content", c);
+            return r.toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String installAiPlugin(String name, String content) {
+        try {
+            if (!validAiName(name)) return fail(new Exception("非法插件名"));
+            if (content == null || content.trim().isEmpty())
+                return fail(new Exception("插件文件为空"));
+            new JSONObject(content); // 校验
+            java.io.File dir = aiPluginDir();
+            dir.mkdirs();
+            java.nio.file.Files.write(
+                    new java.io.File(dir, name + ".json").toPath(),
+                    content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return "{\"ok\":true}";
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String deleteAiPlugin(String name) {
+        try {
+            if (!validAiName(name)) return fail(new Exception("非法插件名"));
+            java.io.File f = new java.io.File(aiPluginDir(), name + ".json");
+            if (f.isFile()) f.delete();
+            return "{\"ok\":true}";
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
     private Toast lastToast;
 
     private void toast(final String msg) {
