@@ -38,4 +38,4 @@ APK binaries are not committed to the repo; pushing a tag triggers GitHub Action
 
 ## License
 
-MIT
+[MIT](LICENSE) — free software, do what you want with it.
