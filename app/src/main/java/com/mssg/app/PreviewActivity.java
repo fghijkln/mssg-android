@@ -58,8 +58,13 @@ public class PreviewActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        String siteDir = getIntent().getStringExtra("siteDir");
-        publicDir = new File(siteDir, "public");
+        String publicDirExtra = getIntent().getStringExtra("publicDir");
+        if (publicDirExtra != null) {
+            publicDir = new File(publicDirExtra);
+        } else {
+            String siteDir = getIntent().getStringExtra("siteDir");
+            publicDir = new File(siteDir, "public");
+        }
 
         wv = findViewById(R.id.webview);
         WebSettings s = wv.getSettings();

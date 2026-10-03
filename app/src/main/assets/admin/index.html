@@ -137,7 +137,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   </div>
   <div class="actions">
     <button class="btn ghost" onclick="doPreview()">预览</button>
-    <button class="btn ghost" onclick="doBuild()">构建</button>
+    <button class="btn ghost" onclick="openBuildDialog()">构建</button>
   </div>
 </div>
 
@@ -152,7 +152,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   <div class="drawer-sec">构建</div>
   <button class="drawer-item" onclick="closeDrawer();doBuild()">🔨 构建站点</button>
   <button class="drawer-item" onclick="closeDrawer();doPreview()">👁 预览站点</button>
-  <button class="drawer-item" onclick="closeDrawer();openFiles()">📁 浏览构建文件</button>
+  <button class="drawer-item" onclick="closeDrawer();openFiles()">📁 构建项目</button>
   <button class="drawer-item" onclick="closeDrawer();doCleanBuild()">🧹 清除构建产物</button>
   <div class="drawer-sec">发布</div>
   <button class="drawer-item" onclick="closeDrawer();openExport()">📦 导出 ZIP</button>
@@ -327,9 +327,24 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   </div>
 </div>
 
+<div class="sheet-backdrop" id="buildSheet" onclick="if(event.target===this)closeBuildDialog()">
+  <div class="sheet">
+    <h3>构建为项目</h3>
+    <div class="field"><label>项目名称</label>
+      <input type="text" id="buildName" placeholder="比如：我的博客 v1">
+    </div>
+    <div id="buildExisting" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="doBuildProject()" style="flex:1">🚀 构建</button>
+      <button class="btn ghost" onclick="closeBuildDialog()">取消</button>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-top:10px">用已有的名字会覆盖该项目（会二次确认）；新名字则新建项目。</div>
+  </div>
+</div>
+
 <div class="sheet-backdrop" id="filesSheet" onclick="if(event.target===this)closeFiles()">
   <div class="sheet" style="max-height:82vh;display:flex;flex-direction:column">
-    <h3>构建文件 <small id="filesTotal" style="color:var(--muted);font-weight:400"></small></h3>
+    <h3 id="filesTitle">构建项目 <small id="filesTotal" style="color:var(--muted);font-weight:400"></small></h3>
     <div id="filesList" style="overflow-y:auto;margin:0 -4px 8px"></div>
     <button class="btn ghost" onclick="closeFiles()">关闭</button>
   </div>
@@ -979,12 +994,36 @@ function doDelete(rel, title){
   });
 }
 
-function doBuild(){
+function openBuildDialog(){
+  $("buildName").value = "";
+  let projects = [];
+  try{
+    const r = JSON.parse(bridge().listProjects());
+    if(r.ok) projects = r.projects || [];
+  }catch(e){}
+  $("buildExisting").innerHTML = projects.length
+    ? '<span style="font-size:13px;color:var(--muted);width:100%">已有项目（点名字填入）：</span>' +
+      projects.map(p => '<button class="btn sm ghost" onclick="document.getElementById(\'buildName\').value=\'' +
+        p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\'">📁 ' + esc(p.name) + '</button>').join("")
+    : "";
+  $("buildSheet").classList.add("show");
+}
+function closeBuildDialog(){ $("buildSheet").classList.remove("show"); }
+function doBuildProject(){
+  const name = ($("buildName").value || "").trim();
+  if(!name){ toast("请输入项目名称"); return; }
+  let exists = false;
+  try{
+    const r = JSON.parse(bridge().listProjects());
+    if(r.ok) exists = (r.projects || []).some(p => p.name === name);
+  }catch(e){}
+  if(exists && !confirm("项目「" + name + "」已存在，覆盖它？")) return;
+  closeBuildDialog();
   withLoading(()=>{
     let r;
-    try{ r = JSON.parse(bridge().buildSite()); }
+    try{ r = JSON.parse(bridge().buildProject(name)); }
     catch(e){ toast("构建失败："+e); return; }
-    toast(r.ok ? r.msg : r.msg);
+    toast(r.ok ? ("已构建为项目「" + r.name + "」，" + r.count + " 个文件") : r.msg);
   });
 }
 
@@ -1053,46 +1092,89 @@ function doCleanBuild(){
   });
 }
 
-/* 构建文件列表 */
+/* 构建项目列表 */
+let CUR_PROJECT = "";
 function openFiles(){
   closeExport();
-  refreshFiles();
+  CUR_PROJECT = "";
+  refreshProjects();
   $("filesSheet").classList.add("show");
 }
 function closeFiles(){ $("filesSheet").classList.remove("show"); }
-function refreshFiles(){
+function refreshProjects(){
   withLoading(()=>{
     let r;
-    try{ r = JSON.parse(bridge().listBuildFiles()); }
+    try{ r = JSON.parse(bridge().listProjects()); }
     catch(e){ toast("读取失败："+e); return; }
     if(!r.ok){ toast(r.msg); return; }
-    $("filesTotal").textContent = r.exists ? (r.count + " 个文件，共 " + r.total_human) : "";
-    if(!r.exists || !r.files.length){
-      $("filesList").innerHTML = '<div style="color:var(--muted);padding:18px 4px">还没有构建产物，先点「构建」</div>';
+    $("filesTitle").innerHTML = '构建项目 <small id="filesTotal" style="color:var(--muted);font-weight:400"></small>';
+    const ps = r.projects || [];
+    $("filesTotal").textContent = ps.length ? (ps.length + " 个项目") : "";
+    if(!ps.length){
+      $("filesList").innerHTML = '<div style="color:var(--muted);padding:18px 4px">还没有项目，先点顶栏「构建」</div>';
       return;
     }
-    $("filesList").innerHTML = r.files.map(f=>{
-      const isHtml = f.path.endsWith(".html");
-      return `<div class="theme-opt" style="padding:10px 12px;${isHtml?"cursor:pointer":""}"` +
-        (isHtml ? ` onclick="previewBuildFile('${esc(f.path)}')"` : "") + `>
-        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px">${esc(f.path)}</span>
-        <span style="color:var(--muted);font-size:13px;flex-shrink:0">${esc(f.size_human)}</span>
-        <button class="btn ghost" style="padding:4px 8px;flex-shrink:0" onclick="event.stopPropagation();doDeleteBuildFile('${esc(f.path)}')">删</button>
-      </div>`;
-    }).join("");
+    $("filesList").innerHTML = ps.map(p =>
+      '<div class="theme-opt" style="padding:12px;cursor:pointer" onclick="openProject(\'' +
+        p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">' +
+        '<span style="flex:1;min-width:0"><b>📁 ' + esc(p.name) + '</b><br>' +
+        '<small style="color:var(--muted)">' + p.count + ' 个文件，共 ' + esc(p.total_human) + '</small></span>' +
+        '<button class="btn ghost" style="padding:4px 8px;flex-shrink:0" onclick="event.stopPropagation();doDeleteProject(\'' +
+        p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">删</button>' +
+      '</div>'
+    ).join("");
   });
 }
-function doDeleteBuildFile(rel){
-  if(!confirm("删除构建文件「" + rel + "」？")) return;
+function doDeleteProject(name){
+  if(!confirm("删除整个项目「" + name + "」？")) return;
   withLoading(()=>{
     let r;
-    try{ r = JSON.parse(bridge().deleteBuildFile(rel)); }
+    try{ r = JSON.parse(bridge().deleteProject(name)); }
     catch(e){ toast("删除失败："+e); return; }
     toast(r.ok ? "已删除" : r.msg);
-    if(r.ok) refreshFiles();
+    if(r.ok) refreshProjects();
   });
 }
-function previewBuildFile(rel){ closeFiles(); bridge().previewBuildFile(rel); }
+function openProject(name){
+  CUR_PROJECT = name;
+  refreshProjectFiles();
+}
+function refreshProjectFiles(){
+  const name = CUR_PROJECT;
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().listProjectFiles(name)); }
+    catch(e){ toast("读取失败："+e); return; }
+    if(!r.ok){ toast(r.msg); return; }
+    $("filesTitle").innerHTML = '<button class="btn ghost sm" onclick="refreshProjects()" style="margin-right:8px">‹ 项目</button>' +
+      esc(name) + ' <small id="filesTotal" style="color:var(--muted);font-weight:400"></small>';
+    $("filesTotal").textContent = r.exists ? (r.count + " 个文件，共 " + r.total_human) : "";
+    let html = '<div style="display:flex;gap:8px;margin-bottom:10px">' +
+      '<button class="btn sm" onclick="bridge().previewProject(\'' + name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">👁 预览</button></div>';
+    if(!r.exists || !r.files.length){
+      $("filesList").innerHTML = html + '<div style="color:var(--muted);padding:18px 4px">空项目</div>';
+      return;
+    }
+    $("filesList").innerHTML = html + r.files.map(f =>
+      '<div class="theme-opt" style="padding:10px 12px;">' +
+        '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px">' + esc(f.path) + '</span>' +
+        '<span style="color:var(--muted);font-size:13px;flex-shrink:0">' + esc(f.size_human) + '</span>' +
+        '<button class="btn ghost" style="padding:4px 8px;flex-shrink:0" onclick="doDeleteProjectFile(\'' + f.path.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">删</button>' +
+      '</div>'
+    ).join("");
+  });
+}
+function doDeleteProjectFile(rel){
+  if(!confirm("删除「" + rel + "」？")) return;
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().deleteProjectFile(CUR_PROJECT, rel)); }
+    catch(e){ toast("删除失败："+e); return; }
+    toast(r.ok ? "已删除" : r.msg);
+    if(r.ok) refreshProjectFiles();
+  });
+}
+
 
 /* 检查更新 */
 let UPD_URL = "";

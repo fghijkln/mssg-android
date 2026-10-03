@@ -583,6 +583,124 @@ def ai_promote_site(parent_dir: str) -> str:
         return _fail(traceback.format_exc(limit=3))
 
 
+_PROJECT_NAME_RE = None
+
+def _valid_project_name(name: str) -> bool:
+    global _PROJECT_NAME_RE
+    import re as _re
+    if _PROJECT_NAME_RE is None:
+        _PROJECT_NAME_RE = _re.compile(r"^[A-Za-z0-9_\-\u4e00-\u9fa5]{1,50}$")
+    return bool(_PROJECT_NAME_RE.match(name or ""))
+
+
+def _projects_dir(parent_dir: str) -> "Path":
+    return Path(parent_dir) / "projects"
+
+
+def list_projects(parent_dir: str) -> str:
+    """列出所有构建项目（按修改时间倒序）。"""
+    try:
+        pdir = _projects_dir(parent_dir)
+        projects = []
+        if pdir.is_dir():
+            for d in pdir.iterdir():
+                if not d.is_dir():
+                    continue
+                files = [f for f in d.rglob("*") if f.is_file()]
+                total = sum(f.stat().st_size for f in files)
+                mtime = max([f.stat().st_mtime for f in files] + [d.stat().st_mtime])
+                projects.append({
+                    "name": d.name,
+                    "count": len(files),
+                    "total_human": _human_size(total),
+                    "mtime": mtime,
+                })
+        projects.sort(key=lambda x: x["mtime"], reverse=True)
+        return _ok(projects=projects)
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def build_project(site_dir: str, parent_dir: str, name: str) -> str:
+    """构建站点并保存为项目（覆盖同名需 JS 先确认）。"""
+    try:
+        if not _valid_project_name(name):
+            return _fail("项目名非法（可用中文、字母、数字、下划线、连字符，最长 50）")
+        from mssg.site import Site
+        Site(site_dir).build()
+        src = _output_dir(site_dir)
+        if not src.is_dir():
+            return _fail("构建没有产物")
+        dst = _projects_dir(parent_dir) / name
+        _copy_data_only(src, dst)
+        files = [f for f in dst.rglob("*") if f.is_file()]
+        return _ok(name=name, count=len(files))
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def list_project_files(parent_dir: str, name: str) -> str:
+    """列出项目下的文件。"""
+    try:
+        if not _valid_project_name(name):
+            return _fail("项目名非法")
+        pdir = _projects_dir(parent_dir) / name
+        if not pdir.is_dir():
+            return _ok(exists=False, files=[], count=0)
+        items = []
+        for f in sorted(pdir.rglob("*")):
+            if f.is_file():
+                size = f.stat().st_size
+                items.append({"path": f.relative_to(pdir).as_posix(),
+                              "size": size, "size_human": _human_size(size)})
+        total = sum(i["size"] for i in items)
+        return _ok(exists=True, files=items, count=len(items),
+                   total_human=_human_size(total))
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def delete_project(parent_dir: str, name: str) -> str:
+    """删除整个项目。"""
+    import shutil as _shutil
+    try:
+        if not _valid_project_name(name):
+            return _fail("项目名非法")
+        pdir = _projects_dir(parent_dir) / name
+        if pdir.is_dir():
+            _shutil.rmtree(pdir)
+        return _ok()
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def delete_project_file(parent_dir: str, name: str, rel: str) -> str:
+    """删除项目中的单个文件（防 ../ 穿出）。"""
+    import shutil as _shutil
+    try:
+        if not _valid_project_name(name):
+            return _fail("项目名非法")
+        pdir = _projects_dir(parent_dir) / name
+        target = (pdir / rel).resolve()
+        if pdir.resolve() not in target.parents and target != pdir.resolve():
+            return _fail("非法路径")
+        if target.is_file():
+            target.unlink()
+        elif target.is_dir():
+            _shutil.rmtree(target)
+        # 清理空目录
+        for parent in target.parents:
+            if parent == pdir.resolve():
+                break
+            try:
+                parent.rmdir()
+            except OSError:
+                break
+        return _ok()
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
 def export_page_html(site_dir: str, rel: str) -> str:
     """构建并返回单篇文章的 HTML 文件路径。"""
     try:

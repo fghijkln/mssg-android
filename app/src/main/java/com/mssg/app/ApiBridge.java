@@ -527,6 +527,59 @@ public class ApiBridge {
         activity.startActivity(intent);
     }
 
+    /* 构建项目（多版本存档） */
+    @JavascriptInterface
+    public String listProjects() {
+        try {
+            return api().callAttr("list_projects", parentDir()).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String buildProject(String name) {
+        try {
+            return api().callAttr("build_project", siteDir, parentDir(), name).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String listProjectFiles(String name) {
+        try {
+            return api().callAttr("list_project_files", parentDir(), name).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String deleteProject(String name) {
+        try {
+            return api().callAttr("delete_project", parentDir(), name).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String deleteProjectFile(String name, String rel) {
+        try {
+            return api().callAttr("delete_project_file", parentDir(), name, rel).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public void previewProject(String name) {
+        Intent intent = new Intent(activity, PreviewActivity.class);
+        intent.putExtra("publicDir", parentDir() + "/projects/" + name);
+        activity.startActivity(intent);
+    }
+
     private Toast lastToast;
 
     private void toast(final String msg) {

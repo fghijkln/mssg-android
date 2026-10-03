@@ -1,5 +1,5 @@
 {
-  "latest": "0.24.3",
-  "notes": "v0.24.3\n- 修「设为我的站点」报 Permission denied：改用 _copy_data_only（只拷数据不碰权限）",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.24.3/mssg.apk"
+  "latest": "0.25.0",
+  "notes": "v0.25.0\n- 构建项目：点构建先输入项目名，产物按项目存档；新名字新建，旧名字覆盖（二次确认）；构建项目里可看文件、预览、删除",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.25.0/mssg.apk"
 }
