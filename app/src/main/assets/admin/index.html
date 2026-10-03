@@ -9,7 +9,22 @@
   --primary:#4f46e5; --primary-dark:#4338ca;
   --bg:#f4f5f7; --card:#ffffff; --text:#1f2937; --muted:#6b7280;
   --danger:#dc2626; --ok:#059669;
+  --input-bg:#ffffff; --input-border:#d1d5db;
+  --hover:#f3f4f6; --active-bg:#eef2ff;
+  --danger-bg:#fee2e2; --warn-bg:#fef3c7; --warn-text:#b45309;
+  --btn-sec-bg:#e5e7eb; --toast-bg:#1f2937; --toast-text:#fff;
+  --loading-bg:rgba(255,255,255,.7);
   --radius:14px;
+}
+[data-theme="dark"]{
+  --primary:#6366f1; --primary-dark:#818cf8;
+  --bg:#0e1420; --card:#182034; --text:#e9edf5; --muted:#9aa5bb;
+  --danger:#f87171; --ok:#34d399;
+  --input-bg:#111a2e; --input-border:#2c3a58;
+  --hover:#222c47; --active-bg:#26304f;
+  --danger-bg:#3c2020; --warn-bg:#3a2f16; --warn-text:#fbbf24;
+  --btn-sec-bg:#2a3552; --toast-bg:#e9edf5; --toast-text:#111827;
+  --loading-bg:rgba(10,15,28,.72);
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
@@ -27,8 +42,8 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   cursor:pointer;background:var(--primary);color:#fff;}
 .btn:active{opacity:.85;}
 .btn.ghost{background:rgba(255,255,255,.18);color:#fff;padding:8px 14px;font-size:14px;}
-.btn.secondary{background:#e5e7eb;color:var(--text);}
-.btn.danger-btn{background:#fee2e2;color:var(--danger);}
+.btn.secondary{background:var(--btn-sec-bg);color:var(--text);}
+.btn.danger-btn{background:var(--danger-bg);color:var(--danger);}
 .btn.block{width:100%;padding:14px;font-size:16px;}
 /* 列表 */
 .list{padding:16px 14px 96px;max-width:640px;margin:0 auto;}
@@ -37,10 +52,10 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .card .info{flex:1;min-width:0;}
 .card .title{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .card .meta{color:var(--muted);font-size:13px;margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
-.badge{font-size:12px;background:#eef2ff;color:var(--primary);border-radius:6px;padding:2px 8px;}
-.badge.draft{background:#fef3c7;color:#b45309;}
-.icon-btn{border:none;background:#f3f4f6;border-radius:10px;width:44px;height:44px;font-size:18px;cursor:pointer;flex-shrink:0;}
-.icon-btn.danger{background:#fee2e2;}
+.badge{font-size:12px;background:var(--active-bg);color:var(--primary);border-radius:6px;padding:2px 8px;}
+.badge.draft{background:var(--warn-bg);color:var(--warn-text);}
+.icon-btn{border:none;background:var(--hover);border-radius:10px;width:44px;height:44px;font-size:18px;cursor:pointer;flex-shrink:0;}
+.icon-btn.danger{background:var(--danger-bg);}
 .empty{text-align:center;color:var(--muted);padding:60px 20px;line-height:1.8;}
 /* FAB */
 .fab{position:fixed;right:20px;bottom:calc(24px + env(safe-area-inset-bottom));z-index:10;
@@ -58,7 +73,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .field{margin-bottom:14px;}
 .field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px;}
 .field input[type=text],.field input[type=date],.field textarea{
-  width:100%;border:1px solid #d1d5db;border-radius:10px;padding:12px;font-size:16px;background:#fff;}
+  width:100%;border:1px solid var(--input-border);border-radius:10px;padding:12px;font-size:16px;background:var(--input-bg);color:var(--text);}
 .field textarea{min-height:300px;font-family:ui-monospace,Menlo,monospace;line-height:1.6;resize:vertical;}
 .row2{display:flex;gap:12px;}
 .row2 .field{flex:1;}
@@ -66,13 +81,13 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .check input{width:22px;height:22px;accent-color:var(--primary);}
 /* toast + loading */
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
-  background:#1f2937;color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;max-width:86vw;
+  background:var(--toast-bg);color:var(--toast-text);padding:12px 20px;border-radius:12px;font-size:14px;max-width:86vw;
   opacity:0;transition:all .25s;z-index:50;pointer-events:none;text-align:center;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-.loading{position:fixed;inset:0;z-index:40;background:rgba(255,255,255,.7);display:none;
+.loading{position:fixed;inset:0;z-index:40;background:var(--loading-bg);display:none;
   align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--muted);}
 .loading.show{display:flex;}
-.spinner{width:40px;height:40px;border:4px solid #e5e7eb;border-top-color:var(--primary);border-radius:50%;
+.spinner{width:40px;height:40px;border:4px solid var(--btn-sec-bg);border-top-color:var(--primary);border-radius:50%;
   animation:spin 0.8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 /* 主题选择 */
@@ -80,12 +95,12 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   align-items:flex-end;justify-content:center;}
 .sheet-backdrop.show{display:flex;}
 .mdbar{display:flex;gap:6px;overflow-x:auto;padding:8px 2px;margin-bottom:2px;}
-.mdbar button{flex:0 0 auto;min-width:40px;height:36px;border:1px solid #e5e7eb;background:#f9fafb;
+.mdbar button{flex:0 0 auto;min-width:40px;height:36px;border:1px solid var(--input-border);background:var(--card);
   border-radius:9px;font-size:15px;font-weight:700;color:var(--text);cursor:pointer;padding:0 10px;}
-.mdbar button:active{background:#eef2ff;border-color:var(--primary);}
+.mdbar button:active{background:var(--active-bg);border-color:var(--primary);}
 .drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:none;}
 .drawer-backdrop.show{display:block;}
-.drawer{position:fixed;top:0;left:0;bottom:0;width:272px;max-width:82vw;background:#fff;z-index:41;
+.drawer{position:fixed;top:0;left:0;bottom:0;width:272px;max-width:82vw;background:var(--card);z-index:41;
   transform:translateX(-106%);transition:transform .24s ease;overflow-y:auto;
   padding:14px 12px calc(20px + env(safe-area-inset-bottom));box-shadow:2px 0 14px rgba(0,0,0,.18);}
 .drawer.open{transform:none;}
@@ -93,15 +108,15 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .drawer-sec{font-size:12px;color:var(--muted);padding:14px 10px 4px;letter-spacing:1px;}
 .drawer-item{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;
   padding:12px 10px;font-size:15px;border-radius:10px;cursor:pointer;text-align:left;color:var(--text);}
-.drawer-item:active{background:#f3f4f6;}
+.drawer-item:active{background:var(--hover);}
 .drawer-item small{color:var(--muted);font-size:12px;margin-left:auto;}
-.sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:640px;
+.sheet{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;
   padding:20px 18px calc(24px + env(safe-area-inset-bottom));}
 .sheet h3{margin:0 0 14px;font-size:17px;}
-.theme-opt{display:flex;align-items:center;gap:12px;width:100%;border:1px solid #e5e7eb;
-  background:#fff;border-radius:12px;padding:14px 16px;font-size:16px;margin-bottom:10px;cursor:pointer;text-align:left;}
-.theme-opt .dot{width:22px;height:22px;border-radius:50%;flex-shrink:0;border:1px solid #d1d5db;}
-.theme-opt.current{border-color:var(--primary);background:#eef2ff;}
+.theme-opt{display:flex;align-items:center;gap:12px;width:100%;border:1px solid var(--input-border);
+  background:var(--card);border-radius:12px;padding:14px 16px;font-size:16px;margin-bottom:10px;cursor:pointer;text-align:left;}
+.theme-opt .dot{width:22px;height:22px;border-radius:50%;flex-shrink:0;border:1px solid var(--input-border);}
+.theme-opt.current{border-color:var(--primary);background:var(--active-bg);}
 .theme-opt .check{margin-left:auto;color:var(--primary);font-weight:700;}
 </style>
 </head>
@@ -135,6 +150,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   <button class="drawer-item" onclick="closeDrawer();openCf()">☁️ 部署到 Cloudflare Pages</button>
   <button class="drawer-item" onclick="closeDrawer();doBackupSite()">🗄️ 备份站点源码</button>
   <div class="drawer-sec">设置</div>
+  <button class="drawer-item" onclick="toggleTheme()">🌙 深色模式<small id="themeLabel"></small></button>
   <button class="drawer-item" onclick="closeDrawer();openThemes()">🎨 主题</button>
   <button class="drawer-item" onclick="closeDrawer();checkUpdate(true)">🔄 检查更新<small id="verLabelD"></small></button>
 </nav>
@@ -421,6 +437,25 @@ function onImagePicked(name){
   mdInsert("\n![图片](" + name + ")\n");
   toast("图片已插入");
 }
+
+/* 深色模式 */
+function applyTheme(t){
+  document.documentElement.setAttribute("data-theme", t);
+  try{ localStorage.setItem("mssg_theme", t); }catch(e){}
+  var l = $("themeLabel"); if(l) l.textContent = (t === "dark" ? "开" : "关");
+}
+function toggleTheme(){
+  var cur = document.documentElement.getAttribute("data-theme") || "light";
+  var next = (cur === "dark") ? "light" : "dark";
+  applyTheme(next);
+  toast(next === "dark" ? "已切换为深色模式" : "已切换为浅色模式");
+}
+(function(){
+  var t = "light";
+  try{ t = localStorage.getItem("mssg_theme") || "light"; }catch(e){}
+  if(t !== "dark") t = "light";
+  applyTheme(t);
+})();
 
 function doSave(){
   const rel = $("f_rel").value.trim();

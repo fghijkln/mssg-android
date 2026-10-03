@@ -1,5 +1,5 @@
 {
-  "latest": "0.18.1",
-  "notes": "v0.18.1\n- 修应用内下载没反应：DownloadManager 走系统网络栈，在 DNS 被污染的手机上连不上服务器；改走 WebView（Chromium 网络栈）下载，带进度提示，失败自动转浏览器",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.18.1/mssg.apk"
+  "latest": "0.19.0",
+  "notes": "v0.19.0\n- 深色模式：抽屉「设置」里可开关，跟随保存，下次打开还记得\n- 修 v0.18.1 构建误删相册选图代码的问题",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.19.0/mssg.apk"
 }
