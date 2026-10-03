@@ -272,7 +272,17 @@ function toast(msg, ms=2600){
   clearTimeout(t._timer);
   t._timer = setTimeout(()=>t.classList.remove("show"), ms);
 }
-function loading(show){ $("loading").classList.toggle("show", !!show); }
+let loadingTimer = null;
+function loading(show){
+  if(show){
+    // 延迟 350ms 再显示：快速操作直接过去，不白闪一下
+    if(loadingTimer) clearTimeout(loadingTimer);
+    loadingTimer = setTimeout(()=>{ loadingTimer = null; $("loading").classList.add("show"); }, 350);
+  }else{
+    if(loadingTimer){ clearTimeout(loadingTimer); loadingTimer = null; }
+    $("loading").classList.remove("show");
+  }
+}
 /* 让出一次绘制机会，避免同步桥调用卡住时 loading 画不出来 */
 function withLoading(fn){
   loading(true);
