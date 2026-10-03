@@ -1,5 +1,5 @@
 {
-  "latest": "0.18.0",
-  "notes": "v0.18.0\n- 编辑器 Markdown 工具栏：标题/加粗/斜体/链接/图片/列表/引用/代码，一键插入\n- 从相册插入图片：自动存入文章同目录（page bundle），过大自动缩到 1600 宽，构建时同步到页面目录",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.18.0/mssg.apk"
+  "latest": "0.18.1",
+  "notes": "v0.18.1\n- 修应用内下载没反应：DownloadManager 走系统网络栈，在 DNS 被污染的手机上连不上服务器；改走 WebView（Chromium 网络栈）下载，带进度提示，失败自动转浏览器",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.18.1/mssg.apk"
 }

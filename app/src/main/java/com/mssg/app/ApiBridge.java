@@ -2,11 +2,7 @@ package com.mssg.app;
 
 import android.app.Activity;
 import android.content.ContentValues;
-import android.app.DownloadManager;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.Environment;
 import android.provider.Settings;
 import android.net.Uri;
@@ -50,13 +46,17 @@ public class ApiBridge {
             new java.util.HashMap<>();
     private final java.util.Map<String, String> cfResults = new java.util.HashMap<>();
 
-    // 应用内更新：下载任务 id（-1 表示空闲）
-    private long updateDownloadId = -1;
-    private BroadcastReceiver updateReceiver;
-
     // 相册选图
     private static final int REQ_PICK_IMAGE = 1001;
     private String pendingImageRel;
+
+    // 应用内更新（走 WebView/Chromium 网络栈：系统 DNS 坏了也能下）
+    private OutputStream dlOut;
+    private Uri dlUri;
+    private String dlUrl;
+    private long dlReceived, dlTotal;
+    private int dlLastPct;
+    private boolean dlActive;
 
     public ApiBridge(Activity activity, WebView wv, String siteDir) {
         this.activity = activity;
@@ -324,142 +324,153 @@ public class ApiBridge {
     }
 
     /**
-     * 应用内更新：DownloadManager 下载 APK，完成后自动调起系统安装。
-     * Android 8+ 需要用户先在设置里允许本应用“安装未知应用”。
+     * 应用内更新：用主 WebView（Chromium 网络栈）fetch APK 二进制，
+     * base64 分片传回 Java 写文件，完成后调起系统安装。
+     * 不走 DownloadManager——后者用系统网络栈，在 DNS 被污染的手机上不可用。
      */
     @JavascriptInterface
     public void downloadUpdate(String url) {
-        if (Build.VERSION.SDK_INT >= 26 &&
-                !activity.getPackageManager().canRequestPackageInstalls()) {
-            try {
-                Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:" + activity.getPackageName()));
-                activity.startActivity(i);
-            } catch (Exception ignored) {}
-            toast("请允许“安装未知应用”，然后再点下载更新");
-            return;
-        }
-        if (updateDownloadId != -1) {
-            toast("正在下载更新，请稍候…");
-            return;
-        }
         try {
-            DownloadManager dm = (DownloadManager)
-                    activity.getSystemService(Context.DOWNLOAD_SERVICE);
-            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
-            req.setTitle("mssg 更新下载");
-            req.setDescription("正在下载新版本…");
-            req.setNotificationVisibility(
-                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            req.setDestinationInExternalPublicDir(
-                    Environment.DIRECTORY_DOWNLOADS, "mssg-update.apk");
-            req.setMimeType("application/vnd.android.package-archive");
-            updateDownloadId = dm.enqueue(req);
-            if (updateReceiver == null) {
-                updateReceiver = new BroadcastReceiver() {
-                    @Override
-                    public void onReceive(Context ctx, Intent intent) {
-                        long id = intent.getLongExtra(
-                                DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-                        if (id == updateDownloadId) {
-                            updateDownloadId = -1;
-                            installUpdate(dm, id);
-                        }
-                    }
-                };
-                activity.registerReceiver(updateReceiver, new IntentFilter(
-                        DownloadManager.ACTION_DOWNLOAD_COMPLETE));
-            }
-            toast("开始下载更新，完成后自动调起安装");
-        } catch (Exception e) {
-            updateDownloadId = -1;
-            toast("下载失败：" + e.getMessage());
-        }
-    }
-
-    private void installUpdate(DownloadManager dm, long id) {
-        try {
-            Uri uri = dm.getUriForDownloadedFile(id);
-            if (uri == null) {
-                toast("安装失败：找不到下载的文件");
+            if (Build.VERSION.SDK_INT >= 26 &&
+                    !activity.getPackageManager().canRequestPackageInstalls()) {
+                try {
+                    Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            Uri.parse("package:" + activity.getPackageName()));
+                    activity.startActivity(i);
+                } catch (Exception ignored) {}
+                toast("请允许“安装未知应用”，然后再点下载更新");
                 return;
             }
-            Intent install = new Intent(Intent.ACTION_VIEW);
-            install.setDataAndType(uri, "application/vnd.android.package-archive");
-            install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                    | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            activity.startActivity(install);
         } catch (Exception e) {
-            toast("调起安装失败：" + e.getMessage());
-        }
-    }
-
-    /**
-     * 从相册选一张图片，导入到文章的 page bundle 目录，并在光标处插入引用。
-     * 选择结果经 MainActivity.onActivityResult 回到 onImagePicked。
-     */
-    @JavascriptInterface
-    public void pickImage(String rel) {
-        if (rel == null || rel.trim().isEmpty()) {
-            toast("请先填写文件名，再插入图片");
+            toast("检查安装权限失败：" + e.getMessage());
             return;
         }
-        pendingImageRel = rel.trim();
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("image/*");
+        synchronized (this) {
+            if (dlActive) {
+                toast("正在下载更新，请稍候…");
+                return;
+            }
+            dlActive = true;
+        }
+        dlUrl = url;
+        activity.runOnUiThread(() -> startWebDownload(url));
+    }
+
+    private void startWebDownload(String url) {
         try {
-            activity.startActivityForResult(intent, REQ_PICK_IMAGE);
+            ContentValues v = new ContentValues();
+            v.put(MediaStore.Downloads.DISPLAY_NAME, "mssg-update.apk");
+            v.put(MediaStore.Downloads.MIME_TYPE,
+                    "application/vnd.android.package-archive");
+            if (Build.VERSION.SDK_INT >= 29) {
+                v.put(MediaStore.Downloads.RELATIVE_PATH,
+                        Environment.DIRECTORY_DOWNLOADS);
+            }
+            dlUri = activity.getContentResolver().insert(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+            if (dlUri == null) throw new Exception("无法写入下载目录");
+            dlOut = activity.getContentResolver().openOutputStream(dlUri);
+            if (dlOut == null) throw new Exception("无法打开输出流");
+            dlReceived = 0;
+            dlTotal = -1;
+            dlLastPct = -1;
+            toast("开始下载更新…");
+            String js = "(async()=>{try{"
+                    + "const r=await fetch(" + JSONObject.quote(url) + ");"
+                    + "if(!r.ok) throw new Error('HTTP '+r.status);"
+                    + "const len=r.headers.get('content-length');"
+                    + "if(len) window.MssgApi.dlMeta(parseInt(len));"
+                    + "const buf=await r.arrayBuffer();"
+                    + "const u8=new Uint8Array(buf);"
+                    + "const CH=65536;"
+                    + "for(let i=0;i<u8.length;i+=CH){"
+                    + "  const sub=u8.subarray(i,Math.min(i+CH,u8.length));"
+                    + "  window.MssgApi.dlChunk(btoa(String.fromCharCode.apply(null,sub)));"
+                    + "}"
+                    + "window.MssgApi.dlDone();"
+                    + "}catch(e){window.MssgApi.dlError(String((e&&e.message)||e));}"
+                    + "})();";
+            wv.evaluateJavascript(js, null);
         } catch (Exception e) {
-            toast("打不开相册：" + e.getMessage());
+            finishDownload("下载失败：" + e.getMessage(), true);
         }
     }
 
-    /** 供 MainActivity.onActivityResult 调用；返回 true 表示已处理。 */
-    public boolean onImagePicked(int requestCode, int resultCode, Intent data) {
-        if (requestCode != REQ_PICK_IMAGE) return false;
-        if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
-            return true;
-        }
-        final Uri uri = data.getData();
-        final String rel = pendingImageRel;
-        new Thread(() -> {
-            File tmp = null;
-            try {
-                String ext = ".jpg";
-                try {
-                    String mime = activity.getContentResolver().getType(uri);
-                    if ("image/png".equals(mime)) ext = ".png";
-                    else if ("image/webp".equals(mime)) ext = ".webp";
-                    else if ("image/gif".equals(mime)) ext = ".gif";
-                } catch (Exception ignored) {}
-                tmp = File.createTempFile("pick", ext, activity.getCacheDir());
-                try (InputStream in = activity.getContentResolver().openInputStream(uri);
-                     OutputStream out = new FileOutputStream(tmp)) {
-                    byte[] buf = new byte[8192];
-                    int n;
-                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-                }
-                String r = api().callAttr("import_bundle_image",
-                        siteDir, tmp.getAbsolutePath(), rel).toString();
-                JSONObject o = new JSONObject(r);
-                if (o.optBoolean("ok", false)) {
-                    final String js = "onImagePicked(" +
-                            JSONObject.quote(o.optString("name", "")) + ")";
-                    activity.runOnUiThread(() -> {
-                        try { wv.evaluateJavascript(js, null); }
-                        catch (Exception ignored) {}
-                    });
+    /** 以下 dl* 方法供下载 JS 回调（@JavascriptInterface）。 */
+    @JavascriptInterface
+    public void dlMeta(long total) {
+        dlTotal = total;
+    }
+
+    @JavascriptInterface
+    public void dlChunk(String b64) {
+        try {
+            byte[] b = Base64.decode(b64, Base64.DEFAULT);
+            synchronized (this) {
+                if (dlOut != null) {
+                    dlOut.write(b);
+                    dlReceived += b.length;
                 } else {
-                    toast(o.optString("msg", "图片处理失败"));
+                    return;
                 }
-            } catch (Exception e) {
-                toast("图片处理失败：" + e.getMessage());
-            } finally {
-                if (tmp != null) tmp.delete();
             }
-        }).start();
-        return true;
+            if (dlTotal > 0) {
+                int pct = (int) (dlReceived * 100 / dlTotal);
+                if (pct >= dlLastPct + 25) {
+                    dlLastPct = pct;
+                    toast("下载中 " + pct + "%…");
+                }
+            }
+        } catch (Exception e) {
+            finishDownload("写入失败：" + e.getMessage(), true);
+        }
+    }
+
+    @JavascriptInterface
+    public void dlDone() {
+        finishDownload(null, false);
+    }
+
+    @JavascriptInterface
+    public void dlError(String err) {
+        finishDownload(err, true);
+    }
+
+    private void finishDownload(String err, boolean fallbackBrowser) {
+        synchronized (this) {
+            try {
+                if (dlOut != null) dlOut.close();
+            } catch (Exception ignored) {}
+            dlOut = null;
+            dlActive = false;
+        }
+        final String error = err;
+        activity.runOnUiThread(() -> {
+            if (error != null) {
+                toast(error + (fallbackBrowser ? "，改用浏览器下载" : ""));
+                if (fallbackBrowser && dlUrl != null) {
+                    try {
+                        openUrl(dlUrl);
+                    } catch (Exception ignored) {}
+                }
+                return;
+            }
+            try {
+                if (dlUri == null) {
+                    toast("安装失败：找不到文件");
+                    return;
+                }
+                toast("下载完成，正在调起安装…");
+                Intent install = new Intent(Intent.ACTION_VIEW);
+                install.setDataAndType(dlUri,
+                        "application/vnd.android.package-archive");
+                install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                activity.startActivity(install);
+            } catch (Exception e) {
+                toast("调起安装失败：" + e.getMessage());
+            }
+        });
     }
 
     @JavascriptInterface
