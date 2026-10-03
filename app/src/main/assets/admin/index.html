@@ -151,6 +151,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   <button class="drawer-item" onclick="closeDrawer();openExport()">📦 导出 ZIP</button>
   <button class="drawer-item" onclick="closeDrawer();openCf()">☁️ 部署到 Cloudflare Pages</button>
   <button class="drawer-item" onclick="closeDrawer();doBackupSite()">🗄️ 备份站点源码</button>
+  <button class="drawer-item" onclick="closeDrawer();pickBackup()">📥 从备份恢复</button>
   <div class="drawer-sec">设置</div>
   <button class="drawer-item" onclick="toggleTheme()">🌙 深色模式<small id="themeLabel"></small></button>
   <button class="drawer-item" onclick="closeDrawer();openThemes()">🎨 主题</button>
@@ -458,6 +459,28 @@ function toggleTheme(){
   if(t !== "dark") t = "light";
   applyTheme(t);
 })();
+
+/* 从备份恢复 */
+function pickBackup(){
+  try{ bridge().pickBackup(); }
+  catch(e){ toast("打不开文件选择：" + e); }
+}
+function onBackupPicked(path, articles, sizeHuman){
+  withLoading(()=>{
+    const tip = "找到备份（" + articles + " 篇文章，" + sizeHuman +
+      "）\n恢复将覆盖当前站点的全部内容，确定吗？";
+    if(!confirm(tip)){ try{ bridge().discardBackup(path); }catch(e){} return; }
+    let r;
+    try{ r = JSON.parse(bridge().restoreBackup(path)); }
+    catch(e){ toast("恢复失败：" + e); return; }
+    if(r.ok){
+      toast("已恢复 " + r.articles + " 篇文章，重新构建即可预览", 3200);
+      refresh();
+    }else{
+      toast("恢复失败：" + r.msg, 3600);
+    }
+  });
+}
 
 function doSave(){
   const rel = $("f_rel").value.trim();

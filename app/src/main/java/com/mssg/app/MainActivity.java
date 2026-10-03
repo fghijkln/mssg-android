@@ -59,7 +59,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (bridge != null) bridge.onImagePicked(requestCode, resultCode, data);
+        if (bridge == null) return;
+        if (bridge.onImagePicked(requestCode, resultCode, data)) return;
+        bridge.onBackupPicked(requestCode, resultCode, data);
     }
 
     @Override

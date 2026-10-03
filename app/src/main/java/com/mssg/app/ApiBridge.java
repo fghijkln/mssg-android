@@ -49,6 +49,8 @@ public class ApiBridge {
     // 相册选图
     private static final int REQ_PICK_IMAGE = 1001;
     private String pendingImageRel;
+    // 备份恢复选文件
+    private static final int REQ_PICK_BACKUP = 1002;
 
     // 应用内更新（走 WebView/Chromium 网络栈：系统 DNS 坏了也能下）
     private OutputStream dlOut;
@@ -539,6 +541,82 @@ public class ApiBridge {
             }
         }).start();
         return true;
+    }
+
+    /** 打开系统文件选择器，选站点备份 ZIP。结果经 onBackupPicked 回调。 */
+    @JavascriptInterface
+    public void pickBackup() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/zip");
+        try {
+            activity.startActivityForResult(intent, REQ_PICK_BACKUP);
+        } catch (Exception e) {
+            toast("打不开文件选择：" + e.getMessage());
+        }
+    }
+
+    /** 供 MainActivity.onActivityResult 调用；返回 true 表示已处理。 */
+    public boolean onBackupPicked(int requestCode, int resultCode, Intent data) {
+        if (requestCode != REQ_PICK_BACKUP) return false;
+        if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
+            return true;
+        }
+        final Uri uri = data.getData();
+        new Thread(() -> {
+            File tmp = null;
+            try {
+                tmp = File.createTempFile("backup", ".zip", activity.getCacheDir());
+                try (InputStream in = activity.getContentResolver().openInputStream(uri);
+                     OutputStream out = new FileOutputStream(tmp)) {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                }
+                String r = api().callAttr("inspect_backup",
+                        tmp.getAbsolutePath()).toString();
+                JSONObject o = new JSONObject(r);
+                if (o.optBoolean("ok", false)) {
+                    final String js = "onBackupPicked(" +
+                            JSONObject.quote(tmp.getAbsolutePath()) + "," +
+                            o.optInt("articles", 0) + "," +
+                            JSONObject.quote(o.optString("size_human", "")) + ")";
+                    activity.runOnUiThread(() -> {
+                        try { wv.evaluateJavascript(js, null); }
+                        catch (Exception ignored) {}
+                    });
+                } else {
+                    tmp.delete();
+                    toast(o.optString("msg", "备份校验失败"));
+                }
+            } catch (Exception e) {
+                if (tmp != null) tmp.delete();
+                toast("读取备份失败：" + e.getMessage());
+            }
+        }).start();
+        return true;
+    }
+
+    /** 执行恢复（Python 已校验）。返回 JSON。 */
+    @JavascriptInterface
+    public String restoreBackup(String zipPath) {
+        try {
+            String r = api().callAttr("restore_backup",
+                    siteDir, zipPath).toString();
+            new File(zipPath).delete();
+            return r;
+        } catch (Exception e) {
+            return "{\"ok\": false, \"msg\": \"" +
+                    esc(String.valueOf(e.getMessage())) + "\"}";
+        }
+    }
+
+    /** 用户取消恢复时清理缓存的备份文件。 */
+    @JavascriptInterface
+    public void discardBackup(String zipPath) {
+        try {
+            if (zipPath != null) new File(zipPath).delete();
+        } catch (Exception ignored) {}
     }
 
     @JavascriptInterface

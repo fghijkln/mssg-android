@@ -1,5 +1,5 @@
 {
-  "latest": "0.20.1",
-  "notes": "v0.20.1\n- 修更新弹窗点不动：v0.15.3 重写更新检查时误删了 closeUpdate 函数，导致点下载/稍后都抛错，下载从没真正开始过",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.20.1/mssg.apk"
+  "latest": "0.21.0",
+  "notes": "v0.21.0\n- 从备份恢复：抽屉「📥 从备份恢复」，选备份 ZIP→校验→确认→覆盖恢复（保留 Cloudflare 账号），换机不丢数据",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.21.0/mssg.apk"
 }

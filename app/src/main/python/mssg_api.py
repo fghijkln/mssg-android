@@ -294,6 +294,87 @@ def import_bundle_image(site_dir: str, tmp_path: str, rel: str) -> str:
         return _fail(traceback.format_exc(limit=3))
 
 
+_RESTORE_ITEMS = ("mssg.toml", "content", "static", "data", "templates")
+
+
+def _check_backup_zip(zip_path: str) -> "Path":
+    """校验备份 ZIP，返回其 Path；无效则抛 ValueError。"""
+    import zipfile as _zf
+
+    zp = Path(zip_path)
+    if not zp.is_file():
+        raise ValueError("找不到备份文件")
+    if not _zf.is_zipfile(str(zp)):
+        raise ValueError("不是有效的 ZIP 文件")
+    with _zf.ZipFile(str(zp)) as zf:
+        names = zf.namelist()
+    if "mssg.toml" not in names:
+        raise ValueError("该 ZIP 不是织网站点备份（缺少 mssg.toml）")
+    return zp
+
+
+def inspect_backup(zip_path: str) -> str:
+    """查看备份基本信息（不恢复），供恢复前确认。"""
+    try:
+        zp = _check_backup_zip(zip_path)
+        import zipfile as _zf
+
+        with _zf.ZipFile(str(zp)) as zf:
+            articles = sum(
+                1 for n in zf.namelist()
+                if n.startswith("content/") and n.endswith(".md")
+            )
+        size = zp.stat().st_size
+        if size >= 1048576:
+            human = "%.1f MB" % (size / 1048576)
+        elif size >= 1024:
+            human = "%.0f KB" % (size / 1024)
+        else:
+            human = "%d B" % size
+        return _ok(articles=articles, name=zp.name, size_human=human)
+    except Exception as e:
+        return _fail(str(e))
+
+
+def restore_backup(site_dir: str, zip_path: str) -> str:
+    """从备份 ZIP 恢复站点：校验→解到临时目录→替换源码（保留
+    .mssg_cf.json 等 App 配置）→清空构建产物。"""
+    try:
+        from mssg.backup import restore_site
+        import shutil as _shutil
+        import tempfile as _tf
+
+        zp = _check_backup_zip(zip_path)
+        site = Path(site_dir)
+        site.mkdir(parents=True, exist_ok=True)
+        tmp = Path(_tf.mkdtemp(prefix="restore-"))
+        try:
+            restore_site(str(zp), str(tmp))
+            for name in _RESTORE_ITEMS:
+                src = tmp / name
+                if not src.exists():
+                    continue
+                dst = site / name
+                if dst.is_dir() and not dst.is_symlink():
+                    _shutil.rmtree(dst)
+                elif dst.exists() or dst.is_symlink():
+                    dst.unlink()
+                if src.is_dir():
+                    _shutil.copytree(src, dst)
+                else:
+                    _shutil.copy2(src, dst)
+            # 构建产物清空，下次构建全新生成
+            pub = site / "public"
+            if pub.is_dir():
+                _shutil.rmtree(pub)
+            articles = sum(1 for _ in site.glob("content/**/*.md"))
+        finally:
+            _shutil.rmtree(tmp, ignore_errors=True)
+        return _ok(articles=articles)
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
 def export_page_html(site_dir: str, rel: str) -> str:
     """构建并返回单篇文章的 HTML 文件路径。"""
     try:
