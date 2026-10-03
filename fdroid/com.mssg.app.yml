@@ -1,0 +1,49 @@
+# F-Droid 收录用 metadata 草稿（提交时复制到 fdroiddata 的 metadata/com.mssg.app.yml）
+# 提交前把 Builds/CurrentVersion 对齐到当时的最新 tag。
+
+Categories:
+  - Development
+License: MIT
+AuthorName: mssg contributors
+WebSite: https://github.com/fghijkln/mssg-android
+SourceCode: https://github.com/fghijkln/mssg-android
+IssueTracker: https://github.com/fghijkln/mssg-android/issues
+
+AutoName: WebWeave
+Summary: Static site generator that runs entirely on Android
+Description: |
+  WebWeave is a static site generator that runs entirely on your
+  phone — no desktop computer needed.
+
+  Describe the site you want in one sentence and the built-in AI
+  assistant generates it; preview it on the phone, then export a
+  ZIP or deploy to Cloudflare Pages.
+
+  Features:
+
+  * AI site builder and AI writing/coding assistants (requires
+    your own OpenAI-compatible API key)
+  * Plugin system with shortcodes
+  * Markdown editor, themes, on-device site search
+  * Backup/restore, Cloudflare Pages deployment
+
+  WebWeave is free software, released under the MIT license.
+  Cloudflare deployment and the AI features are optional and
+  configured by the user; the core works fully offline.
+
+RepoType: git
+Repo: https://github.com/fghijkln/mssg-android
+
+# fdroid flavor：关闭应用内自更新（F-Droid 政策要求），更新走 F-Droid。
+Builds:
+  - versionName: 0.27.5
+    versionCode: 78
+    commit: v0.27.5
+    subdir: app
+    gradle:
+      - fdroid
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9.]+$
+CurrentVersion: 0.27.5
+CurrentVersionCode: 78

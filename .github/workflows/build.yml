@@ -47,7 +47,7 @@ jobs:
           java = open("app/src/main/java/com/mssg/app/ApiBridge.java", encoding="utf-8").read()
           py = open("app/src/main/python/mssg_api.py", encoding="utf-8").read()
           js_calls = set(re.findall(r'bridge\(\)\.(\w+)\(', js))
-          java_methods = set(re.findall(r'public (?:String|void) (\w+)\(', java))
+          java_methods = set(re.findall(r'public (?:String|void|boolean|int) (\w+)\(', java))
           py_calls = set(re.findall(r'callAttr\("(\w+)"', java))
           py_defs = set(re.findall(r'^def (\w+)\(', py, re.M))
           missing = (js_calls - java_methods) | (py_calls - py_defs)
@@ -77,8 +77,14 @@ jobs:
           echo "Building versionName=$VER versionCode=$CODE (tag $TAG)"
           gradle assembleRelease --console=plain -PappVersionName="$VER" -PappVersionCode="$CODE"
 
-      - name: Upload APK
+      - name: Upload APK (github flavor)
         uses: actions/upload-artifact@v4
         with:
           name: mssg-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          path: app/build/outputs/apk/github/release/app-github-release.apk
+
+      - name: Upload APK (fdroid flavor)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mssg-apk-fdroid
+          path: app/build/outputs/apk/fdroid/release/app-fdroid-release.apk

@@ -31,7 +31,7 @@ API tokens are stored on the device only. Nothing is uploaded to any server.
 ## Build
 
 ```bash
-./gradlew assembleDebug
+gradle assembleDebug
 ```
 
 APK binaries are not committed to the repo; pushing a tag triggers GitHub Actions to build and publish to Releases.

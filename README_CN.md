@@ -31,7 +31,7 @@ Token 只存在手机本地，不上传任何服务器。
 ## 构建
 
 ```bash
-./gradlew assembleDebug
+gradle assembleDebug
 ```
 
 APK 二进制不进仓库；打 tag 后 GitHub Actions 自动构建并发布到 Release。

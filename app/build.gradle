@@ -32,6 +32,24 @@ android {
         }
     }
 
+    buildFeatures {
+        // AGP 8+ 默认关闭 BuildConfig；flavor 开关（SELF_UPDATE_ENABLED）需要它
+        buildConfig true
+    }
+
+    // 发行渠道：github（自带更新器）/ fdroid（F-Droid 政策不允许应用内自更新）
+    flavorDimensions "dist"
+    productFlavors {
+        github {
+            dimension "dist"
+            buildConfigField "boolean", "SELF_UPDATE_ENABLED", "true"
+        }
+        fdroid {
+            dimension "dist"
+            buildConfigField "boolean", "SELF_UPDATE_ENABLED", "false"
+        }
+    }
+
     signingConfigs {
         release {
             // CI 从 Secrets 注入；本地构建没有这些环境变量时用 debug 签名代替

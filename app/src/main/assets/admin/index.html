@@ -171,7 +171,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   <div class="drawer-sec" data-i18n="drawer.sec_settings">设置</div>
   <button class="drawer-item" data-i18n="drawer.dark" onclick="toggleTheme()">🌙 深色模式<small id="themeLabel"></small></button>
   <button class="drawer-item" data-i18n="drawer.plugins" onclick="closeDrawer();openPlugins()">🧩 扩展商店</button>
-  <button class="drawer-item" data-i18n="drawer.check_update" onclick="closeDrawer();checkUpdate(true)">🔄 检查更新<small id="verLabelD"></small></button>
+  <button class="drawer-item" id="drawerCheckUpdate" data-i18n="drawer.check_update" onclick="closeDrawer();checkUpdate(true)">🔄 检查更新<small id="verLabelD"></small></button>
   <button class="drawer-item" onclick="setLang(APP_LANG==='zh'?'en':'zh')">🌐 <span data-i18n="drawer.language">语言 / Language</span></button>
 </nav>
 
@@ -975,9 +975,12 @@ setTimeout(()=>{
     const b = $("verLabelD"); if(b) b.textContent = v;
   }catch(e){}
 }, 500);
-setTimeout(()=>checkUpdate(false), 3500);
+if(SELF_UPDATE) setTimeout(()=>checkUpdate(false), 3500);
 const $ = id => document.getElementById(id);
 const bridge = () => window.MssgApi;
+// 发行渠道开关：fdroid 版关闭应用内自更新（F-Droid 政策要求），默认开
+const SELF_UPDATE = (()=>{ try{ return bridge().selfUpdateEnabled(); }catch(e){ return true; } })();
+if(!SELF_UPDATE){ const b=$("drawerCheckUpdate"); if(b) b.style.display="none"; }
 let editingRel = null;
 
 function toast(msg, ms=2600){
@@ -1973,6 +1976,7 @@ let UPD_MANUAL = false, UPD_WAITING = false;
 const UPDATE_JSON_URL =
   "https://raw.githubusercontent.com/fghijkln/mssg-android/master/update.json";
 function checkUpdate(manual){
+  if(!SELF_UPDATE) return; // fdroid 版：更新走 F-Droid，不自查
   // 数据源：仓库内 update.json（GitHub API 对匿名请求 /releases/* 经常 404，不可靠）
   UPD_MANUAL = manual; UPD_WAITING = true;
   loading(true);

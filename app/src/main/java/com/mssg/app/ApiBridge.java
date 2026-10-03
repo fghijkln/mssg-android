@@ -337,6 +337,12 @@ public class ApiBridge {
         }
     }
 
+    /** 发行渠道开关：fdroid 版关闭应用内自更新（F-Droid 政策要求） */
+    @JavascriptInterface
+    public boolean selfUpdateEnabled() {
+        return BuildConfig.SELF_UPDATE_ENABLED;
+    }
+
     /**
      * 通用异步文本抓取：网络在普通后台线程跑，不占 JS 桥线程；
      * 结果通过 onFetchText(tag, jsonStr) 回调到页面。
