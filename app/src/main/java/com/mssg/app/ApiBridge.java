@@ -330,7 +330,6 @@ public class ApiBridge {
      */
     @JavascriptInterface
     public void downloadUpdate(String url) {
-        toast("⑥ 原生 downloadUpdate 进入");
         try {
             if (Build.VERSION.SDK_INT >= 26 &&
                     !activity.getPackageManager().canRequestPackageInstalls()) {
@@ -354,7 +353,6 @@ public class ApiBridge {
             dlActive = true;
         }
         dlUrl = url;
-        toast("⑦ 权限通过，启动下载");
         activity.runOnUiThread(() -> startWebDownload(url));
     }
 
@@ -376,7 +374,7 @@ public class ApiBridge {
             dlReceived = 0;
             dlTotal = -1;
             dlLastPct = -1;
-            toast("⑧ 开始 WebView 下载…");
+            toast("开始下载更新…");
             String js = "(async()=>{try{"
                     + "const r=await fetch(" + JSONObject.quote(url) + ");"
                     + "if(!r.ok) throw new Error('HTTP '+r.status);"

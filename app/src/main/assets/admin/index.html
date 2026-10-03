@@ -95,7 +95,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   align-items:flex-end;justify-content:center;}
 .sheet-backdrop.show{display:flex;}
 #updLater{background:var(--btn-sec-bg);color:var(--text);width:100%;}
-#updLog:empty{display:none;}
+
 .mdbar{display:flex;gap:6px;overflow-x:auto;padding:8px 2px;margin-bottom:2px;}
 .mdbar button{flex:0 0 auto;min-width:40px;height:36px;border:1px solid var(--input-border);background:var(--card);
   border-radius:9px;font-size:15px;font-weight:700;color:var(--text);cursor:pointer;padding:0 10px;}
@@ -272,7 +272,6 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
       <span>⬇️</span><span>下载并安装<br><small style="color:var(--muted)">应用内下载，完成后自动调起安装</small></span>
     </button>
     <button class="btn ghost" id="updLater" onclick="closeUpdate()">稍后</button>
-    <div id="updLog" style="font-size:12px;color:var(--muted);white-space:pre-wrap;max-height:20vh;overflow-y:auto;margin-top:8px"></div>
   </div>
 </div>
 
@@ -652,20 +651,12 @@ function onFetchText(tag, raw){
     toast("已是最新版本（v" + cur + "）");
   }
 }
-function updLog(m){
-  var el = $("updLog");
-  if(el) el.textContent += m + "\n";
-  toast(m);
-}
+function closeUpdate(){ $("updateSheet").classList.remove("show"); }
 function doUpdateDownload(){
-  var ver = "";
-  try{ ver = bridge().getAppVersion(); }catch(e){}
-  updLog("① 点了下载（当前 v" + ver + "）");
-  if(!UPD_URL){ updLog("② UPD_URL 为空，中止"); return; }
-  updLog("③ 关闭弹窗，调用原生下载");
+  if(!UPD_URL) return;
   closeUpdate();
-  try{ bridge().downloadUpdate(UPD_URL); updLog("④ 原生方法已调用"); }
-  catch(e){ updLog("⑤ 调用失败：" + e); }
+  try{ bridge().downloadUpdate(UPD_URL); }
+  catch(e){ toast("下载失败：" + e); }
 }
 function closeExport(){ $("exportSheet").classList.remove("show"); }
 function doBackupSite(){

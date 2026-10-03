@@ -1,5 +1,5 @@
 {
-  "latest": "0.20.0",
-  "notes": "v0.20.0\n- 改名：mssg → 织网\n- 更新下载的步骤诊断保留（点下载后看走到了哪一步）",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.20.0/mssg.apk"
+  "latest": "0.20.1",
+  "notes": "v0.20.1\n- 修更新弹窗点不动：v0.15.3 重写更新检查时误删了 closeUpdate 函数，导致点下载/稍后都抛错，下载从没真正开始过",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.20.1/mssg.apk"
 }
