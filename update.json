@@ -1,5 +1,5 @@
 {
-  "latest": "0.25.5",
-  "notes": "v0.25.5\n- 切换主题不再自动构建\n- 主题移到首页（横滑选择）\n- 修抽屉滚动带动主页",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.25.5/app-release.apk"
+  "latest": "0.25.6",
+  "notes": "v0.25.6\n- AI 助手支持多插件切换（写作/代码）\n- 新插件 ai-coder：手机写代码帮手",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.25.6/app-release.apk"
 }

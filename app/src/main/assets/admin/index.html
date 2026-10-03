@@ -304,7 +304,10 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 
 <div class="sheet-backdrop" id="aiSheet" onclick="if(event.target===this)closeAi()">
   <div class="sheet" style="max-height:86vh;display:flex;flex-direction:column">
-    <h3>🤖 AI 写作助手</h3>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <h3 style="margin:0;flex:1">🤖 AI 助手</h3>
+      <select id="aiPluginSel" onchange="switchAiPlugin(this.value)" style="display:none;max-width:45%"></select>
+    </div>
     <div id="aiActions" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
     <div id="aiResultWrap" style="display:none;margin-bottom:10px">
       <div class="field"><label>结果</label>
@@ -738,18 +741,41 @@ function openAi(){
   $("aiSheet").classList.add("show");
 }
 function closeAi(){ $("aiSheet").classList.remove("show"); }
+let AI_PLUGINS = [];
 function loadAiActions(){
   AI_ACTIONS = DEFAULT_AI_ACTIONS;
+  AI_PLUGINS = [];
   try{
     const r = JSON.parse(bridge().listAiPlugins());
-    if(r.ok && r.plugins && r.plugins.length){
-      const p = JSON.parse(bridge().getAiPlugin(r.plugins[0].name));
-      if(p.ok){
-        const j = JSON.parse(p.content);
-        if(j.actions && j.actions.length) AI_ACTIONS = j.actions;
-      }
+    if(r.ok && r.plugins && r.plugins.length) AI_PLUGINS = r.plugins;
+  }catch(e){}
+  const sel = $("aiPluginSel");
+  if(AI_PLUGINS.length > 1){
+    sel.style.display = "";
+    sel.innerHTML = '<option value="">内置默认</option>' + AI_PLUGINS.map(p =>
+      '<option value="' + escHtml(p.name) + '">' + escHtml(p.description || p.name) + '</option>').join("");
+    sel.value = "";
+  }else{
+    sel.style.display = "none";
+    if(AI_PLUGINS.length === 1) loadAiPluginActions(AI_PLUGINS[0].name);
+  }
+  renderAiActions();
+}
+function switchAiPlugin(name){
+  if(!name){ AI_ACTIONS = DEFAULT_AI_ACTIONS; }
+  else loadAiPluginActions(name);
+  renderAiActions();
+}
+function loadAiPluginActions(name){
+  try{
+    const p = JSON.parse(bridge().getAiPlugin(name));
+    if(p.ok){
+      const j = JSON.parse(p.content);
+      if(j.actions && j.actions.length) AI_ACTIONS = j.actions;
     }
   }catch(e){}
+}
+function renderAiActions(){
   $("aiActions").innerHTML = AI_ACTIONS.map(a =>
     '<button class="btn sm" onclick="runAiAction(\'' + a.id.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">' +
     escHtml(a.label || a.id) + '</button>').join("");
