@@ -11,8 +11,10 @@ android {
         targetSdk 34
         // 版本号由 CI 从 git tag 自动传入（-PappVersionName/-PappVersionCode），
         // 本地构建时回退到下面的手写值。以后发版不用再手动改这里。
-        versionCode (project.findProperty("appVersionCode") ?: 37) as int
-        versionName project.findProperty("appVersionName") ?: "0.27.0"
+        def verCode = (project.findProperty("appVersionCode") ?: "37") as int
+        def verName = project.findProperty("appVersionName") ?: "0.27.0"
+        versionCode verCode
+        versionName verName
 
         ndk {
             // 只留 arm64；x86_64（模拟器）/armeabi-v7a（32 位）已砍

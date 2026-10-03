@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 完整历史 + tags：版本号自动化需要 git describe / rev-list 能看到 tag
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
