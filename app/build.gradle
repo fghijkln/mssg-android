@@ -9,8 +9,8 @@ android {
         applicationId "com.mssg.app"
         minSdk 24
         targetSdk 34
-        versionCode 6
-        versionName "0.16.0"
+        versionCode 7
+        versionName "0.17.0"
 
         ndk {
             // 主流手机全覆盖；x86_64 供模拟器用
@@ -28,9 +28,25 @@ android {
         }
     }
 
+    signingConfigs {
+        release {
+            // CI 从 Secrets 注入；本地构建没有这些环境变量时用 debug 签名代替
+            def ksPath = System.getenv("MSSG_KEYSTORE_PATH")
+            if (ksPath) {
+                storeFile file(ksPath)
+                storePassword System.getenv("MSSG_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("MSSG_KEY_ALIAS")
+                keyPassword System.getenv("MSSG_KEY_PASSWORD")
+            } else {
+                initWith signingConfigs.debug
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
+            signingConfig signingConfigs.release
         }
         debug {
             minifyEnabled false

@@ -1,5 +1,5 @@
 {
-  "latest": "0.16.0",
-  "notes": "v0.16.0\n- App 有图标了：藏青底 + 白色气泡文档\n- 修抽屉按钮点击时右侧白闪：loading 遮罩延迟 350ms 显示，快速操作不再闪",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.16.0/app-debug.apk"
+  "latest": "0.17.0",
+  "notes": "v0.17.0\n- 应用内更新：点更新后直接在 App 里下载，完成后自动调起安装，不用再跳浏览器\n- 固定签名：以后覆盖安装不再要求先卸载（注意：这次需要最后手动卸载一次）\n- 修抽屉里点“检查更新”后抽屉不自动收回",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.17.0/mssg.apk"
 }

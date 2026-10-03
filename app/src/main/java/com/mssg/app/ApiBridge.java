@@ -2,10 +2,15 @@ package com.mssg.app;
 
 import android.app.Activity;
 import android.content.ContentValues;
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Environment;
+import android.provider.Settings;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
 import android.provider.MediaStore;
 import android.os.Handler;
 import android.os.Looper;
@@ -43,6 +48,10 @@ public class ApiBridge {
     private final java.util.Map<String, java.util.concurrent.CountDownLatch> cfLatches =
             new java.util.HashMap<>();
     private final java.util.Map<String, String> cfResults = new java.util.HashMap<>();
+
+    // 应用内更新：下载任务 id（-1 表示空闲）
+    private long updateDownloadId = -1;
+    private BroadcastReceiver updateReceiver;
 
     public ApiBridge(Activity activity, WebView wv, String siteDir) {
         this.activity = activity;
@@ -302,6 +311,82 @@ public class ApiBridge {
                 } catch (Exception ignored) {}
             });
         }).start();
+    }
+
+    private void toast(final String msg) {
+        activity.runOnUiThread(() ->
+                Toast.makeText(activity, msg, Toast.LENGTH_LONG).show());
+    }
+
+    /**
+     * 应用内更新：DownloadManager 下载 APK，完成后自动调起系统安装。
+     * Android 8+ 需要用户先在设置里允许本应用“安装未知应用”。
+     */
+    @JavascriptInterface
+    public void downloadUpdate(String url) {
+        if (Build.VERSION.SDK_INT >= 26 &&
+                !activity.getPackageManager().canRequestPackageInstalls()) {
+            try {
+                Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:" + activity.getPackageName()));
+                activity.startActivity(i);
+            } catch (Exception ignored) {}
+            toast("请允许“安装未知应用”，然后再点下载更新");
+            return;
+        }
+        if (updateDownloadId != -1) {
+            toast("正在下载更新，请稍候…");
+            return;
+        }
+        try {
+            DownloadManager dm = (DownloadManager)
+                    activity.getSystemService(Context.DOWNLOAD_SERVICE);
+            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
+            req.setTitle("mssg 更新下载");
+            req.setDescription("正在下载新版本…");
+            req.setNotificationVisibility(
+                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            req.setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS, "mssg-update.apk");
+            req.setMimeType("application/vnd.android.package-archive");
+            updateDownloadId = dm.enqueue(req);
+            if (updateReceiver == null) {
+                updateReceiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context ctx, Intent intent) {
+                        long id = intent.getLongExtra(
+                                DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                        if (id == updateDownloadId) {
+                            updateDownloadId = -1;
+                            installUpdate(dm, id);
+                        }
+                    }
+                };
+                activity.registerReceiver(updateReceiver, new IntentFilter(
+                        DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+            }
+            toast("开始下载更新，完成后自动调起安装");
+        } catch (Exception e) {
+            updateDownloadId = -1;
+            toast("下载失败：" + e.getMessage());
+        }
+    }
+
+    private void installUpdate(DownloadManager dm, long id) {
+        try {
+            Uri uri = dm.getUriForDownloadedFile(id);
+            if (uri == null) {
+                toast("安装失败：找不到下载的文件");
+                return;
+            }
+            Intent install = new Intent(Intent.ACTION_VIEW);
+            install.setDataAndType(uri, "application/vnd.android.package-archive");
+            install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            activity.startActivity(install);
+        } catch (Exception e) {
+            toast("调起安装失败：" + e.getMessage());
+        }
     }
 
     @JavascriptInterface

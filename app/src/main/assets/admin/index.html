@@ -132,7 +132,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   <button class="drawer-item" onclick="closeDrawer();doBackupSite()">🗄️ 备份站点源码</button>
   <div class="drawer-sec">设置</div>
   <button class="drawer-item" onclick="closeDrawer();openThemes()">🎨 主题</button>
-  <button class="drawer-item" onclick="checkUpdate(true)">🔄 检查更新<small id="verLabelD"></small></button>
+  <button class="drawer-item" onclick="closeDrawer();checkUpdate(true)">🔄 检查更新<small id="verLabelD"></small></button>
 </nav>
 
 <div class="list" id="list"></div>
@@ -236,7 +236,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     <h3>🔄 发现新版本 <span id="updVer"></span></h3>
     <div id="updBody" style="font-size:14px;color:var(--muted);white-space:pre-wrap;max-height:30vh;overflow-y:auto;margin-bottom:12px"></div>
     <button class="theme-opt" onclick="doUpdateDownload()">
-      <span>⬇️</span><span>下载更新<br><small style="color:var(--muted)">用浏览器打开下载链接</small></span>
+      <span>⬇️</span><span>下载并安装<br><small style="color:var(--muted)">应用内下载，完成后自动调起安装</small></span>
     </button>
     <button class="btn ghost" onclick="closeUpdate()">稍后</button>
   </div>
@@ -540,7 +540,12 @@ function onFetchText(tag, raw){
     toast("已是最新版本（v" + cur + "）");
   }
 }
-function doUpdateDownload(){ if(UPD_URL) bridge().openUrl(UPD_URL); }
+function doUpdateDownload(){
+  if(!UPD_URL) return;
+  closeUpdate();
+  try{ bridge().downloadUpdate(UPD_URL); }
+  catch(e){ toast("下载失败："+e); }
+}
 function closeExport(){ $("exportSheet").classList.remove("show"); }
 function doBackupSite(){
   closeExport();
