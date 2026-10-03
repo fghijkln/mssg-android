@@ -1,0 +1,1 @@
+v0.27.6: Saving/deleting articles no longer triggers a full rebuild; clearing build artifacts also clears project snapshots. Debug APKs are now published alongside release builds.
