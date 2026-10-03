@@ -1,5 +1,5 @@
 {
-  "latest": "0.19.0",
-  "notes": "v0.19.0\n- 深色模式：抽屉「设置」里可开关，跟随保存，下次打开还记得\n- 修 v0.18.1 构建误删相册选图代码的问题",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.19.0/mssg.apk"
+  "latest": "0.19.1",
+  "notes": "v0.19.1\n- 更新下载加步骤诊断日志（点下载后看走到了哪一步）\n- 修更新弹窗里「稍后」按钮在浅色下看不见",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.19.1/mssg.apk"
 }
