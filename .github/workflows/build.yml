@@ -1,5 +1,9 @@
 name: Build APK
 
+# 最小权限：checkout 读代码即可；产物上传不需要额外权限
+permissions:
+  contents: read
+
 on:
   push:
     branches: [master]
