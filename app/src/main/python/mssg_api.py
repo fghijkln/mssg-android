@@ -102,11 +102,16 @@ def build_site(site_dir: str) -> str:
         return _fail(traceback.format_exc(limit=3))
 
 
-_THEMES_ZH = {
-    "company": "公司站（浅色）",
-    "minimal": "极简风",
-    "novacore": "深色科技",
+_THEMES = {
+    "company": ("公司站（浅色）", "Company (Light)"),
+    "minimal": ("极简风", "Minimal"),
+    "novacore": ("深色科技", "Dark Tech"),
 }
+
+
+def _theme_name(tid: str) -> str:
+    zh, en = _THEMES.get(tid, (tid, tid))
+    return en if _APP_LANG == "en" else zh
 
 
 def list_themes() -> str:
@@ -116,7 +121,7 @@ def list_themes() -> str:
         themes = Site.available_themes()
         return _ok(
             themes=[
-                {"id": t, "name": _THEMES_ZH.get(t, t)} for t in themes
+                {"id": t, "name": _theme_name(t)} for t in themes
             ]
         )
     except Exception as e:
@@ -345,7 +350,7 @@ def _check_backup_zip(zip_path: str) -> "Path":
     with _zf.ZipFile(str(zp)) as zf:
         names = zf.namelist()
     if "mssg.toml" not in names:
-        raise ValueError("该 ZIP 不是织网站点备份（缺少 mssg.toml）")
+        raise ValueError("该 ZIP 不是 WebWeave 站点备份（缺少 mssg.toml）")
     return zp
 
 

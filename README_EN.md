@@ -1,4 +1,4 @@
-# Mssg for Android
+# WebWeave for Android
 
 A static site generator that runs entirely on your phone. Write articles, switch themes, build, preview, and deploy — all without a desktop. Things Hugo can't do on mobile.
 

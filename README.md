@@ -1,4 +1,4 @@
-# mssg Android
+# WebWeave (mssg Android)
 
 手机上的静态站点生成器。写文章、换主题、构建、预览、部署，全在手机上完成——Hugo 做不到的事。
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title data-i18n="app.name">织网</title>
+<title data-i18n="app.name">WebWeave</title>
 <style>
 :root{
   --primary:#4f46e5; --primary-dark:#4338ca;
@@ -142,7 +142,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 <div class="appbar">
   <div style="display:flex;align-items:center;gap:6px">
     <button class="btn ghost" onclick="openDrawer()" aria-label="菜单">☰</button>
-    <h1 data-i18n="app.name">织网</h1>
+    <h1 data-i18n="app.name">WebWeave</h1>
   </div>
   <div class="actions">
     <button class="btn ghost" data-i18n="top.preview" onclick="doPreview()">预览</button>
@@ -284,9 +284,9 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     </div>
     <div class="field"><label>主题</label>
       <select id="aiBuildTheme">
-        <option value="auto">让 AI 选</option>
-        <option value="minimal">minimal（简约）</option>
-        <option value="company">company（公司站）</option>
+        <option value="auto" data-i18n="ai.theme_auto">让 AI 选</option>
+        <option value="minimal">minimal</option>
+        <option value="company">company</option>
       </select>
     </div>
     <button class="btn" onclick="runAiBuild()" style="margin-bottom:8px">🚀 生成网站</button>
@@ -406,7 +406,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 /* ============ I18N ============ */
 const I18N = {
 zh: {
-  "app.name": "织网",
+  "app.name": "WebWeave",
   "drawer.ai_build": "✨ AI 建站",
   "drawer.sec_content": "内容",
   "drawer.new_post": "✏️ 新建文章",
@@ -511,6 +511,22 @@ zh: {
   "store.title": "🧩 扩展商店",
   "store.installed": "已安装",
   "store.available": "可安装",
+  "store.install": "安装",
+  "store.loading": "正在加载插件列表…",
+  "store.load_fail": "加载失败：",
+  "store.empty_installed": "暂无已安装插件",
+  "store.empty_available": "暂无插件",
+  "msg.deleted": "已删除",
+  "msg.delete_fail": "删除失败：",
+  "msg.downloading": "正在下载 ",
+  "msg.download_fail": "下载失败：",
+  "msg.installed_ok": "已安装 ",
+  "msg.install_fail": "安装失败：",
+  "msg.confirm_del_plugin": "删除插件「{name}」？",
+  "msg.confirm_del_ai_plugin": "删除 AI 插件「{name}」？",
+  "msg.unknown_error": "未知错误",
+  "theme.css_in_use": "（使用中）",
+  "ai.theme_auto": "让 AI 选",
   "build_dialog.title": "构建为项目",
   "build_dialog.name": "项目名称",
   "build_dialog.name_ph": "比如：我的博客 v1",
@@ -524,7 +540,7 @@ zh: {
   "update.later": "稍后",
 },
 en: {
-  "app.name": "Mssg",
+  "app.name": "WebWeave",
   "drawer.ai_build": "✨ AI Site Builder",
   "drawer.sec_content": "Content",
   "drawer.new_post": "✏️ New Post",
@@ -554,6 +570,8 @@ en: {
   "editor.save": "Save",
   "editor.title": "Title",
   "editor.title_ph": "Post title",
+  "editor.draft_ph": "Draft (unpublished)",
+  "editor.category_ph": "Categories (comma separated)",
   "editor.file": "Filename (relative to content/)",
   "editor.date": "Date",
   "editor.tags": "Tags (comma separated)",
@@ -627,6 +645,22 @@ en: {
   "store.title": "🧩 Plugin Store",
   "store.installed": "Installed",
   "store.available": "Available",
+  "store.install": "Install",
+  "store.loading": "Loading plugin list…",
+  "store.load_fail": "Load failed: ",
+  "store.empty_installed": "No plugins installed",
+  "store.empty_available": "No plugins available",
+  "msg.deleted": "Deleted",
+  "msg.delete_fail": "Delete failed: ",
+  "msg.downloading": "Downloading ",
+  "msg.download_fail": "Download failed: ",
+  "msg.installed_ok": "Installed ",
+  "msg.install_fail": "Install failed: ",
+  "msg.confirm_del_plugin": "Delete plugin \"{name}\"?",
+  "msg.confirm_del_ai_plugin": "Delete AI plugin \"{name}\"?",
+  "msg.unknown_error": "Unknown error",
+  "theme.css_in_use": " (in use)",
+  "ai.theme_auto": "Let AI choose",
   "build_dialog.title": "Build as Project",
   "build_dialog.name": "Project name",
   "build_dialog.name_ph": "e.g. My Blog v1",
@@ -642,7 +676,7 @@ en: {
 };
 let APP_LANG = "zh";
 try{ APP_LANG = localStorage.getItem("app_lang") || "zh"; }catch(e){}
-setTimeout(()=>{ try{ bridge().setAppLang(APP_LANG); }catch(e){} }, 1500);
+setTimeout(()=>{ try{ bridge().setAppLang(APP_LANG); }catch(e){} try{ renderHomeThemes(); }catch(e){} }, 1500);
 function t(key){
   const d = I18N[APP_LANG] || I18N.zh;
   return (d[key] !== undefined) ? d[key] : (I18N.zh[key] || key);
@@ -1245,7 +1279,7 @@ function refreshPlugins(){
     const r = JSON.parse(bridge().listInstalledPlugins());
     if(r.ok) installed = r.plugins || [];
     else toast(r.msg);
-  }catch(e){ toast("读取已安装插件失败：" + e); }
+  }catch(e){ toast(t("store.load_fail") + e); }
   let aiInstalled = [];
   try{
     const r = JSON.parse(bridge().listAiPlugins());
@@ -1254,9 +1288,9 @@ function refreshPlugins(){
   renderInstalledPlugins(installed, aiInstalled);
   if(PLUGINS_CACHE){ renderAvailablePlugins(PLUGINS_CACHE, installed); }
   else{
-    $("pluginAvailable").innerHTML = '<div style="color:var(--muted);font-size:14px">正在加载插件列表…</div>';
+    $("pluginAvailable").innerHTML = '<div style="color:var(--muted);font-size:14px">' + t("store.loading") + '</div>';
     try{ bridge().fetchText("plugins", PLUGINS_JSON_URL); }
-    catch(e){ $("pluginAvailable").innerHTML = '<div style="color:var(--danger);font-size:14px">加载失败：' + escHtml(e) + '</div>'; }
+    catch(e){ $("pluginAvailable").innerHTML = '<div style="color:var(--danger);font-size:14px">' + t("store.load_fail") + escHtml(e) + '</div>'; }
   }
 }
 function renderInstalledPlugins(list, aiList){
@@ -1264,23 +1298,23 @@ function renderInstalledPlugins(list, aiList){
   aiList = aiList || [];
   const rows = list.map(p =>
     '<div class="plugin-row"><span>🧩 ' + escHtml(p.name) + '</span>' +
-    '<button class="btn danger-btn sm" onclick="deletePlugin(\'' + p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">删除</button></div>'
+    '<button class="btn danger-btn sm" onclick="deletePlugin(\'' + p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">'+t("common.delete")+"</button></div>"
   );
   aiList.forEach(p => {
     rows.push('<div class="plugin-row"><span>🤖 ' + escHtml(p.name) +
-      ' <small style="color:var(--muted)">' + p.actionCount + ' 个动作</small></span>' +
-      '<button class="btn danger-btn sm" onclick="deleteAiPlugin(\'' + p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">删除</button></div>');
+      ' <small style="color:var(--muted)">' + p.actionCount + t("ai.actions_count") + "</small>"+'</span>' +
+      '<button class="btn danger-btn sm" onclick="deleteAiPlugin(\'' + p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">'+t("common.delete")+"</button></div>");
   });
   el.innerHTML = rows.length ? rows.join("")
-    : '<div style="color:var(--muted);font-size:14px">暂无已安装插件</div>';
+    : '<div style="color:var(--muted);font-size:14px">' + t("store.empty_installed") + '</div>';
 }
 function deleteAiPlugin(name){
-  if(!confirm("删除 AI 插件「" + name + "」？")) return;
+  if(!confirm(t("msg.confirm_del_ai_plugin").replace("{name}", name))) return;
   withLoading(()=>{
     let r;
     try{ r = JSON.parse(bridge().deleteAiPlugin(name)); }
-    catch(e){ toast("删除失败：" + e); return; }
-    toast(r.ok ? "已删除" : r.msg);
+    catch(e){ toast(t("msg.delete_fail") + e); return; }
+    toast(r.ok ? t("msg.deleted") : r.msg);
     if(r.ok) refreshPlugins();
   });
 }
@@ -1296,15 +1330,15 @@ function renderAvailablePlugins(plugins, installed){
     const file = (p.files && p.files[0]) || "";
     return '<div class="plugin-row"><span><b>' + escHtml(p.name) + '</b> ' +
       '<small style="color:var(--muted)">' + escHtml(p.version || "") + '</small><br>' +
-      '<small style="color:var(--muted)">' + escHtml(p.description || "") + '</small>' +
+      '<small style="color:var(--muted)">' + escHtml((APP_LANG==="en" && p.description_en) ? p.description_en : (p.description || "")) + '</small>' +
       (p.type === "ai" ? ' <small style="color:var(--ok)">[AI]</small>' : '') + '</span>' +
-      (done ? '<span style="color:var(--ok);font-size:14px">已安装</span>'
+      (done ? '<span style="color:var(--ok);font-size:14px">' + t("store.installed") + '</span>'
         : '<button class="btn sm" onclick="' + (p.type === "ai" ? "installAiPluginDl" : "installPlugin") + '(\'' +
           p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\',\'' +
           file.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">' +
-          (p.type === "ai" ? "🤖 " : "") + '安装</button>') +
+          (p.type === "ai" ? "🤖 " : "") + t("store.install")+'</button>') +
       '</div>';
-  }).join("") || '<div style="color:var(--muted);font-size:14px">暂无插件</div>';
+  }).join("") || '<div style="color:var(--muted);font-size:14px">' + t("store.empty_available") + '</div>';
 }
 function installPlugin(name, file){
   installPluginTyped(name, file, "shortcode");
@@ -1320,11 +1354,11 @@ function installPluginTyped(name, file, ptype){
   const tag = ptype === "ai" ? "aifile" : "pluginfile";
   if(ptype === "ai") PENDING_AI_PLUGIN = {name: name};
   else PENDING_PLUGIN = {name: name};
-  toast("正在下载 " + name + "…");
+  toast(t("msg.downloading") + name + "…");
   try{ bridge().fetchText(tag, PLUGINS_BASE + file); }
   catch(e){
     if(ptype === "ai") PENDING_AI_PLUGIN = null; else PENDING_PLUGIN = null;
-    toast("下载失败：" + e);
+    toast(t("msg.download_fail") + e);
   }
 }
 function onAiFileFetched(raw){
@@ -1332,33 +1366,33 @@ function onAiFileFetched(raw){
   if(!p) return;
   let r;
   try{ r = JSON.parse(raw); }catch(e){ toast(t("msg.download_parse_fail")); return; }
-  if(!r || r.error || r.status !== 200){ toast("下载失败：" + ((r && (r.error || ("HTTP " + r.status))) || "未知错误")); return; }
+  if(!r || r.error || r.status !== 200){ toast(t("msg.download_fail") + ((r && (r.error || ("HTTP " + r.status))) || t("msg.unknown_error"))); return; }
   const body = r.body || "";
   if(!body.trim()){ toast(t("msg.plugin_empty")); return; }
   withLoading(()=>{
     let rr;
     try{ rr = JSON.parse(bridge().installAiPlugin(p.name, body)); }
-    catch(e){ toast("安装失败：" + e); return; }
-    toast(rr.ok ? ("已安装 " + p.name) : ("安装失败：" + rr.msg));
+    catch(e){ toast(t("msg.install_fail") + e); return; }
+    toast(rr.ok ? (t("msg.installed_ok") + p.name) : (t("msg.install_fail") + rr.msg));
     if(rr.ok) refreshPlugins();
   });
 }
 function deletePlugin(name){
-  if(!confirm("删除插件「" + name + "」？")) return;
+  if(!confirm(t("msg.confirm_del_plugin").replace("{name}", name))) return;
   withLoading(()=>{
     let r;
     try{ r = JSON.parse(bridge().deletePlugin(name)); }
-    catch(e){ toast("删除失败：" + e); return; }
-    toast(r.ok ? "已删除" : r.msg);
+    catch(e){ toast(t("msg.delete_fail") + e); return; }
+    toast(r.ok ? t("msg.deleted") : r.msg);
     if(r.ok) refreshPlugins();
   });
 }
 function onPluginsFetched(raw){
   let r;
-  try{ r = JSON.parse(raw); }catch(e){ setPluginListError("解析失败"); return; }
-  if(!r || r.error || r.status !== 200){ setPluginListError((r && (r.error || ("HTTP " + r.status))) || "未知错误"); return; }
+  try{ r = JSON.parse(raw); }catch(e){ setPluginListError(t("msg.download_parse_fail")); return; }
+  if(!r || r.error || r.status !== 200){ setPluginListError((r && (r.error || ("HTTP " + r.status))) || t("msg.unknown_error")); return; }
   let j;
-  try{ j = JSON.parse(r.body); }catch(e){ setPluginListError("解析失败"); return; }
+  try{ j = JSON.parse(r.body); }catch(e){ setPluginListError(t("msg.download_parse_fail")); return; }
   PLUGINS_CACHE = j.plugins || [];
   renderAvailablePlugins(PLUGINS_CACHE, currentInstalledForRender());
 }
@@ -1502,7 +1536,7 @@ function openThemes(){
   }).join("");
   try{
     const c = JSON.parse(bridge().getCustomCss());
-    $("cssBadge").textContent = c.is_custom ? "（使用中）" : "";
+    $("cssBadge").textContent = c.is_custom ? t("theme.css_in_use") : "";
   }catch(e){}
   $("themeSheet").classList.add("show");
 }
