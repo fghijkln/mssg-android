@@ -192,6 +192,44 @@ def export_source_backup(site_dir: str) -> str:
         return _fail(traceback.format_exc(limit=3))
 
 
+def _human_size(n: int) -> str:
+    f = float(n)
+    for unit in ("B", "KB", "MB", "GB"):
+        if f < 1024 or unit == "GB":
+            return "%d%s" % (n, unit) if unit == "B" else "%.1f%s" % (f, unit)
+        f /= 1024.0
+    return "%.1fGB" % f
+
+
+def clean_build(site_dir: str) -> str:
+    """删除构建输出目录（public/），释放空间。文章/配置不受影响。"""
+    try:
+        import shutil
+
+        public = _output_dir(site_dir)
+        site = Path(site_dir).resolve()
+        if public.resolve() == site:
+            return _fail("拒绝清空站点根目录")
+        shutil.rmtree(public, ignore_errors=True)
+        return _ok()
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def get_build_info(site_dir: str) -> str:
+    """构建产物信息：是否存在、文件数、体积。"""
+    try:
+        public = _output_dir(site_dir)
+        if not public.is_dir():
+            return _ok(exists=False)
+        files = [f for f in public.rglob("*") if f.is_file()]
+        size = sum(f.stat().st_size for f in files)
+        return _ok(exists=True, files=len(files), size=size,
+                   size_human=_human_size(size))
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
 def export_page_html(site_dir: str, rel: str) -> str:
     """构建并返回单篇文章的 HTML 文件路径。"""
     try:

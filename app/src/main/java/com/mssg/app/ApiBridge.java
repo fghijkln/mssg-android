@@ -220,6 +220,31 @@ public class ApiBridge {
     }
 
     @JavascriptInterface
+    public String cleanBuild() {
+        try {
+            return api().callAttr("clean_build", siteDir).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String getBuildInfo() {
+        try {
+            return api().callAttr("get_build_info", siteDir).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public void previewSite() {
+        Intent intent = new Intent(activity, PreviewActivity.class);
+        intent.putExtra("siteDir", siteDir);
+        activity.startActivity(intent);
+    }
+
+    @JavascriptInterface
     public String exportPageHtml(String rel) {
         try {
             return api().callAttr("export_page_html", siteDir, rel).toString();

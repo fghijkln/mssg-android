@@ -178,6 +178,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 <div class="sheet-backdrop" id="exportSheet" onclick="if(event.target===this)closeExport()">
   <div class="sheet">
     <h3>导出整站</h3>
+    <div id="buildInfo" style="font-size:13px;color:var(--muted);margin:0 4px 8px"></div>
     <button class="theme-opt" onclick="doExportZip(true)">
       <span>💾</span><span>保存 ZIP 到下载<br><small style="color:var(--muted)">用于上传到 Cloudflare Pages / Netlify</small></span>
     </button>
@@ -186,6 +187,9 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     </button>
     <button class="theme-opt" onclick="openCf()">
       <span>☁️</span><span>部署到 Cloudflare Pages<br><small style="color:var(--muted)">连接账号后一键上线（可选）</small></span>
+    </button>
+    <button class="theme-opt" onclick="doCleanBuild()">
+      <span>🧹</span><span>清除构建产物<br><small style="color:var(--muted)">删除 public/，文章和配置不受影响</small></span>
     </button>
     <button class="theme-opt" onclick="doBackupSite()">
       <span>🗄️</span><span>备份站点源码<br><small style="color:var(--muted)">打包文章/配置/模板，不含 Token，发到微信/云盘/邮箱</small></span>
@@ -322,8 +326,7 @@ function doPreview(){
     try{ r = JSON.parse(bridge().buildSite()); }
     catch(e){ toast("构建失败："+e); return; }
     if(!r.ok){ toast(r.msg); return; }
-    const dir = bridge().getSiteDir();
-    location.href = "file://" + dir + "/public/index.html";
+    bridge().previewSite();
   });
 }
 
@@ -362,7 +365,25 @@ function pickTheme(id){
 }
 
 /* 导出 */
-function openExport(){ $("exportSheet").classList.add("show"); }
+function openExport(){
+  try{
+    const r = JSON.parse(bridge().getBuildInfo());
+    $("buildInfo").textContent = (r.ok && r.exists)
+      ? ("构建产物：" + r.files + " 个文件，共 " + r.size_human)
+      : "还没有构建产物";
+  }catch(e){ $("buildInfo").textContent = ""; }
+  $("exportSheet").classList.add("show");
+}
+function doCleanBuild(){
+  if(!confirm("删除构建产物（public/）？文章、配置、主题不受影响。")) return;
+  closeExport();
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().cleanBuild()); }
+    catch(e){ toast("清除失败："+e); return; }
+    toast(r.ok ? "已清除构建产物" : r.msg);
+  });
+}
 function closeExport(){ $("exportSheet").classList.remove("show"); }
 function doBackupSite(){
   closeExport();
