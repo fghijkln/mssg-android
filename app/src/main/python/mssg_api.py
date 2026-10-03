@@ -443,6 +443,98 @@ def delete_plugin(site_dir: str, name: str) -> str:
         return _fail(traceback.format_exc(limit=3))
 
 
+def ai_create_site(parent_dir: str, spec_json: str) -> str:
+    """AI 建站：按 spec JSON 在 <parent_dir>/site-ai/ 生成并构建，不碰当前站点。
+
+    spec: {"site": {"title","description","theme"}, "pages": [{"path","title","body"}]}
+    """
+    import json as _json
+    import shutil as _shutil
+
+    try:
+        spec = _json.loads(spec_json)
+        site_cfg = spec.get("site") or {}
+        pages = spec.get("pages") or []
+        if not isinstance(pages, list) or not pages:
+            return _fail("AI 没有返回有效页面")
+
+        target = Path(parent_dir) / "site-ai"
+        if target.exists():
+            _shutil.rmtree(target)
+        # 用脚手架搭架子（主题/目录结构），再覆盖配置与内容
+        from mssg.scaffold import new_site
+        new_site(str(target))
+
+        theme = str(site_cfg.get("theme") or "minimal").strip()
+        if theme not in ("minimal", "company"):
+            theme = "minimal"
+        title = str(site_cfg.get("title") or "我的网站").strip() or "我的网站"
+        desc = str(site_cfg.get("description") or "").strip()
+
+        def _q(s: str) -> str:
+            return '"%s"' % s.replace("\\", "\\\\").replace('"', '\\"')
+
+        toml = (
+            "[site]\n"
+            "title = %s\n"
+            'description = %s\n'
+            'theme = "%s"\n'
+            'language = "zh"\n'
+            % (_q(title), _q(desc), theme)
+        )
+        (target / "mssg.toml").write_text(toml, encoding="utf-8")
+
+        # 清空示例内容，写入 AI 页面
+        content_dir = target / "content"
+        if content_dir.exists():
+            _shutil.rmtree(content_dir)
+        content_dir.mkdir(parents=True)
+
+        count = 0
+        for pg in pages:
+            if not isinstance(pg, dict):
+                continue
+            rel = str(pg.get("path") or "").strip()
+            if not rel.startswith("content/") or ".." in rel:
+                continue
+            if not rel.endswith(".md"):
+                rel += ".md"
+            ptitle = str(pg.get("title") or "").strip()
+            body = str(pg.get("body") or "")
+            if not body.strip():
+                continue
+            fp = target / rel
+            fp.parent.mkdir(parents=True, exist_ok=True)
+            fm = "---\ntitle: %s\n---\n\n" % _q(ptitle or fp.stem)
+            fp.write_text(fm + body, encoding="utf-8")
+            count += 1
+        if count == 0:
+            return _fail("AI 返回的页面都无效")
+
+        from mssg.site import Site
+        Site(str(target)).build()
+        return _ok(pages=count, title=title, theme=theme)
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def ai_promote_site(parent_dir: str) -> str:
+    """把 site-ai/ 设为当前站点（覆盖 site/）。调用前 JS 已让用户确认。"""
+    import shutil as _shutil
+
+    try:
+        src = Path(parent_dir) / "site-ai"
+        dst = Path(parent_dir) / "site"
+        if not src.is_dir() or not (src / "mssg.toml").is_file():
+            return _fail("AI 站点不存在，请先生成")
+        if dst.exists():
+            _shutil.rmtree(dst)
+        _shutil.copytree(src, dst)
+        return _ok()
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
 def export_page_html(site_dir: str, rel: str) -> str:
     """构建并返回单篇文章的 HTML 文件路径。"""
     try:

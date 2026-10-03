@@ -9,8 +9,8 @@ android {
         applicationId "com.mssg.app"
         minSdk 24
         targetSdk 34
-        versionCode 22
-        versionName "0.23.0"
+        versionCode 23
+        versionName "0.24.0"
 
         ndk {
             // 只留 arm64；x86_64（模拟器）/armeabi-v7a（32 位）已砍

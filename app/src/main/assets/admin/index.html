@@ -146,6 +146,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   <div class="drawer-head" style="display:flex;align-items:center;justify-content:space-between">mssg
     <button class="btn ghost" style="padding:6px 12px" onclick="closeDrawer()">✕</button>
   </div>
+  <button class="drawer-item" onclick="closeDrawer();openAiBuild()">✨ AI 建站</button>
   <div class="drawer-sec">内容</div>
   <button class="drawer-item" onclick="closeDrawer();openEditor()">✏️ 新建文章</button>
   <div class="drawer-sec">构建</div>
@@ -262,6 +263,33 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
       <span>📤</span><span>分享 ZIP<br><small style="color:var(--muted)">通过微信 / 邮件 / 云盘发送</small></span>
     </button>
     <div style="font-size:13px;color:var(--muted);margin:0 4px 8px">更多操作（部署、备份、构建文件、检查更新）已移到左上角 ☰ 菜单</div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="aiBuildSheet" onclick="if(event.target===this)closeAiBuild()">
+  <div class="sheet" style="max-height:86vh;display:flex;flex-direction:column">
+    <h3>✨ AI 建站</h3>
+    <div class="field"><label>一句话描述你想要的网站</label>
+      <textarea id="aiBuildDesc" rows="3" placeholder="比如：一个摄影作品集网站，深色风格，有首页、作品、关于我"></textarea>
+    </div>
+    <div class="field"><label>主题</label>
+      <select id="aiBuildTheme">
+        <option value="auto">让 AI 选</option>
+        <option value="minimal">minimal（简约）</option>
+        <option value="company">company（公司站）</option>
+      </select>
+    </div>
+    <button class="btn" onclick="runAiBuild()" style="margin-bottom:8px">🚀 生成网站</button>
+    <div id="aiBuildResult" style="display:none">
+      <div class="field"><label>结果</label>
+        <div id="aiBuildMsg" style="font-size:15px;margin-bottom:10px"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn sm" onclick="aiPreview()">👁 预览</button>
+        <button class="btn sm" onclick="aiPromote()">设为我的站点</button>
+      </div>
+    </div>
+    <button class="btn ghost" onclick="closeAiBuild()">关闭</button>
   </div>
 </div>
 
@@ -531,6 +559,96 @@ function slugify(s){
     .replace(/-+/g, "-").replace(/^-|-$/g, "");
   return slug || ("post-" + Date.now().toString(36));
 }
+/* AI 一句话建站 */
+function openAiBuild(){
+  $("aiBuildResult").style.display = "none";
+  $("aiBuildSheet").classList.add("show");
+}
+function closeAiBuild(){ $("aiBuildSheet").classList.remove("show"); }
+function runAiBuild(){
+  const desc = ($("aiBuildDesc").value || "").trim();
+  if(!desc){ toast("先描述一下你想要的网站"); return; }
+  const s = aiSettings();
+  if(!s.endpoint || !s.key){ toast("请先在 AI 助手里配置 API 地址和 Key"); closeAiBuild(); openAi(); return; }
+  const themeHint = $("aiBuildTheme").value;
+  const sysPrompt = "你是一个静态网站生成器。根据用户的一句话描述，生成一个完整的网站。只返回 JSON，不要任何其他内容，不要 markdown 代码块标记。\n\n" +
+    "格式：\n" +
+    '{"site":{"title":"网站标题","description":"一句话描述","theme":"minimal"},' +
+    '"pages":[{"path":"content/_index.md","title":"页面标题","body":"Markdown 正文"}]}\n\n' +
+    "要求：\n" +
+    "1. 生成 3-5 个页面，必须包含首页 content/_index.md\n" +
+    "2. body 是 Markdown，内容充实，每页 300-800 字，用中文\n" +
+    "3. theme 只能是 minimal 或 company" +
+    (themeHint !== "auto" ? "，必须用 " + themeHint : "") + "\n" +
+    "4. path 必须以 content/ 开头、以 .md 结尾\n" +
+    "5. 只返回 JSON";
+  const url = s.endpoint.replace(/\/+$/, "") + "/chat/completions";
+  const headers = JSON.stringify({
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + s.key
+  });
+  const body = JSON.stringify({
+    model: s.model || "gpt-3.5-turbo",
+    messages: [
+      {role:"system", content: sysPrompt},
+      {role:"user", content: desc}
+    ]
+  });
+  toast("AI 正在建站…");
+  $("aiBuildResult").style.display = "none";
+  try{ bridge().fetchPostText("aibuild", url, headers, body); }
+  catch(e){ toast("请求失败：" + e); }
+}
+function extractJson(text){
+  let t = String(text || "").trim();
+  const m = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if(m) t = m[1].trim();
+  const i = t.indexOf("{"), j = t.lastIndexOf("}");
+  if(i >= 0 && j > i) t = t.slice(i, j + 1);
+  return t;
+}
+function onAiBuildResult(raw){
+  let r;
+  try{ r = JSON.parse(raw); }catch(e){ toast("解析失败"); return; }
+  if(!r || r.error || r.status !== 200){
+    toast("AI 请求失败：" + escHtml((r && (r.error || ("HTTP " + r.status))) || "未知错误"));
+    return;
+  }
+  let j;
+  try{ j = JSON.parse(r.body); }catch(e){ toast("解析失败"); return; }
+  const text = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+  if(!text){ toast("AI 无返回：" + escHtml((j.error && j.error.message) || "未知错误")); return; }
+  let spec;
+  try{ spec = JSON.parse(extractJson(text)); }
+  catch(e){ toast("AI 返回的不是有效 JSON，换个描述再试"); return; }
+  if(!spec.pages || !spec.pages.length){ toast("AI 没有生成页面"); return; }
+  withLoading(()=>{
+    let rr;
+    try{ rr = JSON.parse(bridge().aiCreateSite(JSON.stringify(spec))); }
+    catch(e){ toast("建站失败：" + e); return; }
+    if(!rr.ok){ toast("建站失败：" + rr.msg); return; }
+    $("aiBuildMsg").innerHTML = "已生成 <b>" + escHtml(rr.title || "") + "</b>，" +
+      rr.pages + " 个页面。可以预览看看，满意就设为我的站点。";
+    $("aiBuildResult").style.display = "block";
+    toast("建站完成");
+  });
+}
+function aiPreview(){
+  try{ bridge().previewAiSite(); }catch(e){ toast("预览失败：" + e); }
+}
+function aiPromote(){
+  if(!confirm("把 AI 生成的站点设为当前站点？当前站点的内容会被替换。")) return;
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().aiPromoteSite()); }
+    catch(e){ toast("失败：" + e); return; }
+    if(!r.ok){ toast("失败：" + r.msg); return; }
+    closeAiBuild();
+    toast("已设为当前站点");
+    refreshPages();
+  });
+}
+
 /* AI 写作助手 */
 const DEFAULT_AI_ACTIONS = [
   {id:"continue", label:"✍️ 续写", system:"你是一个写作助手，直接输出内容，不要解释。",
@@ -993,6 +1111,7 @@ function onFetchText(tag, raw){
   if(tag === "plugins"){ onPluginsFetched(raw); return; }
   if(tag === "pluginfile"){ onPluginFileFetched(raw); return; }
   if(tag === "ai"){ onAiResult(raw); return; }
+  if(tag === "aibuild"){ onAiBuildResult(raw); return; }
   if(tag === "aifile"){ onAiFileFetched(raw); return; }
   if(tag !== "update" || !UPD_WAITING) return;
   UPD_WAITING = false; loading(false);

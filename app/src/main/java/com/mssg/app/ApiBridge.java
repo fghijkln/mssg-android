@@ -68,6 +68,12 @@ public class ApiBridge {
         instance = this;
     }
 
+    private String parentDir() {
+        java.io.File f = new java.io.File(siteDir);
+        java.io.File p = f.getParentFile();
+        return p != null ? p.getAbsolutePath() : f.getAbsolutePath();
+    }
+
     private com.chaquo.python.PyObject api() {
         return Python.getInstance().getModule("mssg_api");
     }
@@ -493,6 +499,32 @@ public class ApiBridge {
         } catch (Exception e) {
             return fail(e);
         }
+    }
+
+    /* AI 一句话建站 */
+    @JavascriptInterface
+    public String aiCreateSite(String specJson) {
+        try {
+            return api().callAttr("ai_create_site", parentDir(), specJson).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String aiPromoteSite() {
+        try {
+            return api().callAttr("ai_promote_site", parentDir()).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public void previewAiSite() {
+        Intent intent = new Intent(activity, PreviewActivity.class);
+        intent.putExtra("siteDir", parentDir() + "/site-ai");
+        activity.startActivity(intent);
     }
 
     private Toast lastToast;
