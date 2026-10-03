@@ -310,7 +310,12 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     <div class="drawer-sec">接口设置 <small style="color:var(--muted)">兼容 OpenAI 格式</small></div>
     <div class="field"><label>API 地址</label><input type="text" id="ai_endpoint" placeholder="https://api.deepseek.com/v1"></div>
     <div class="field"><label>API Key</label><input type="password" id="ai_key" placeholder="sk-…"></div>
-    <div class="field"><label>模型</label><input type="text" id="ai_model" placeholder="deepseek-chat"></div>
+    <div class="field"><label>模型</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="ai_model" list="ai_model_list" placeholder="deepseek-chat" style="flex:1">
+        <datalist id="ai_model_list"></datalist>
+        <button class="btn sm" onclick="fetchAiModels()" title="从接口拉取可选模型">🔄</button>
+      </div></div>
     <button class="btn" onclick="saveAiSettings()" style="margin-bottom:8px">保存设置</button>
     <button class="btn ghost" onclick="closeAi()">关闭</button>
   </div>
@@ -702,6 +707,10 @@ function openAi(){
   $("ai_endpoint").value = s.endpoint || "";
   $("ai_key").value = s.key || "";
   $("ai_model").value = s.model || "";
+  try{
+    const cached = JSON.parse(localStorage.getItem("ai_models_cache") || "[]");
+    if(cached.length) renderAiModelList(cached);
+  }catch(e){}
   $("aiResultWrap").style.display = "none";
   AI_LAST_RESULT = "";
   loadAiActions();
@@ -723,6 +732,37 @@ function loadAiActions(){
   $("aiActions").innerHTML = AI_ACTIONS.map(a =>
     '<button class="btn sm" onclick="runAiAction(\'' + a.id.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">' +
     escHtml(a.label || a.id) + '</button>').join("");
+}
+function aiModelsUrl(){
+  const s = aiSettings();
+  const ep = ($("ai_endpoint").value || s.endpoint || "").replace(/\/+$/, "");
+  return ep ? ep + "/models" : "";
+}
+function renderAiModelList(models){
+  const dl = $("ai_model_list");
+  dl.innerHTML = (models || []).map(m =>
+    '<option value="' + escHtml(m) + '">').join("");
+}
+async function fetchAiModels(){
+  const url = aiModelsUrl();
+  if(!url){ toast("请先填 API 地址"); return; }
+  const key = $("ai_key").value || aiSettings().key || "";
+  toast("正在拉取模型列表…");
+  try{
+    const headers = {};
+    if(key) headers["Authorization"] = "Bearer " + key;
+    const r = await fetch(url, {headers: headers});
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    const data = j.data || j.models || [];
+    const models = data.map(m => typeof m === "string" ? m : (m.id || m.name)).filter(Boolean);
+    if(!models.length) throw new Error("列表为空");
+    renderAiModelList(models);
+    try{ localStorage.setItem("ai_models_cache", JSON.stringify(models)); }catch(e){}
+    toast("拉取到 " + models.length + " 个模型，下拉选择");
+  }catch(e){
+    toast("拉取失败：" + e.message + "，可手动输入");
+  }
 }
 function saveAiSettings(){
   withLoading(()=>{
