@@ -1,5 +1,5 @@
 {
-  "latest": "0.21.4",
-  "notes": "v0.21.4\n- APK 瘦身第一刀：砍掉 x86_64（仅模拟器用），体积 48MB→约 35MB",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.21.4/mssg.apk"
+  "latest": "0.21.5",
+  "notes": "v0.21.5\n- APK 瘦身第二刀：砍掉 armeabi-v7a（32 位），只留 arm64",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.21.5/mssg.apk"
 }
