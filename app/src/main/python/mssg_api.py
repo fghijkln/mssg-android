@@ -82,8 +82,7 @@ def save_page(
         if draft:
             form["draft"] = ["on"]
         saved_rel = app.save_page(form)
-        msg = app._rebuild()
-        return _ok(msg=msg, rel=saved_rel)
+        return _ok(rel=saved_rel)
     except ValueError as e:
         return _fail(str(e))
     except Exception:
@@ -94,8 +93,7 @@ def delete_page(site_dir: str, rel: str) -> str:
     try:
         app = _app(site_dir)
         app._safe_path(rel).unlink(missing_ok=True)
-        msg = app._rebuild()
-        return _ok(msg=msg)
+        return _ok()
     except Exception:
         return _fail(traceback.format_exc(limit=3))
 
@@ -222,7 +220,7 @@ def _human_size(n: int) -> str:
 
 
 def clean_build(site_dir: str) -> str:
-    """删除构建输出目录（public/），释放空间。文章/配置不受影响。"""
+    """删除构建输出目录（public/）与全部构建项目快照，释放空间。文章/配置不受影响。"""
     try:
         import shutil
 
@@ -231,6 +229,12 @@ def clean_build(site_dir: str) -> str:
         if public.resolve() == site:
             return _fail("拒绝清空站点根目录", "Refusing to clear site root")
         shutil.rmtree(public, ignore_errors=True)
+        # 构建项目是构建产物的命名快照，一并清除（只删项目目录，不碰其它文件）
+        projects = _projects_dir(str(Path(site_dir).parent))
+        if projects.is_dir():
+            for child in projects.iterdir():
+                if child.is_dir():
+                    shutil.rmtree(child, ignore_errors=True)
         return _ok()
     except Exception:
         return _fail(traceback.format_exc(limit=3))
