@@ -280,6 +280,31 @@ public class ApiBridge {
         }
     }
 
+    /**
+     * 异步检查更新：网络在普通后台线程跑，不占 JS 桥线程；
+     * 结果通过 onUpdateResult(jsonStr) 回调到页面。
+     */
+    @JavascriptInterface
+    public void checkAppUpdate() {
+        new Thread(() -> {
+            String raw;
+            try {
+                raw = cfFetchSync("GET",
+                        "https://api.github.com/fghijkln/mssg-android/releases/latest",
+                        "{\"Accept\":\"application/vnd.github+json\"}", "", 15);
+            } catch (Exception e) {
+                raw = "{\"error\":\"" + e.toString().replace("\"", "'") + "\"}";
+            }
+            final String result = raw;
+            activity.runOnUiThread(() -> {
+                try {
+                    wv.evaluateJavascript(
+                            "onUpdateResult(" + JSONObject.quote(result) + ")", null);
+                } catch (Exception ignored) {}
+            });
+        }).start();
+    }
+
     @JavascriptInterface
     public void openUrl(String url) {
         try {

@@ -116,7 +116,9 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 
 <div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
 <nav class="drawer" id="drawer">
-  <div class="drawer-head">mssg</div>
+  <div class="drawer-head" style="display:flex;align-items:center;justify-content:space-between">mssg
+    <button class="btn ghost" style="padding:6px 12px" onclick="closeDrawer()">✕</button>
+  </div>
   <div class="drawer-sec">内容</div>
   <button class="drawer-item" onclick="closeDrawer();openEditor()">✏️ 新建文章</button>
   <div class="drawer-sec">构建</div>
@@ -489,34 +491,42 @@ function cmpVer(a, b){
   }
   return 0;
 }
+let UPD_MANUAL = false, UPD_WAITING = false;
 function checkUpdate(manual){
-  withLoading(()=>{
-    let cur = "";
-    try{ cur = bridge().getAppVersion(); }catch(e){}
-    let r;
-    try{
-      r = JSON.parse(bridge().cfFetchSync("GET",
-        "https://api.github.com/fghijkln/mssg-android/releases/latest",
-        '{"Accept":"application/vnd.github+json"}', "", 15));
-    }catch(e){ if(manual) toast("检查失败："+e); return; }
-    if(r.error || r.status !== 200){
-      if(manual) toast("检查失败：" + (r.error || ("HTTP " + r.status)));
-      return;
-    }
-    let rel;
-    try{ rel = JSON.parse(r.body); }catch(e){ if(manual) toast("解析失败"); return; }
-    const latest = (rel.tag_name || "").replace(/^v/, "");
-    if(!latest){ if(manual) toast("没取到版本信息"); return; }
-    if(cmpVer(latest, cur) > 0){
-      const apk = (rel.assets || []).find(a=>a.name && a.name.endsWith(".apk"));
-      UPD_URL = apk ? apk.browser_download_url : rel.html_url;
-      $("updVer").textContent = "v" + latest;
-      $("updBody").textContent = (rel.body || "（无更新说明）").slice(0, 1200);
-      $("updateSheet").classList.add("show");
-    }else if(manual){
-      toast("已是最新版本（v" + cur + "）");
-    }
-  });
+  // 异步：桥方法立即返回，不卡 JS 桥线程；结果走 onUpdateResult 回调
+  UPD_MANUAL = manual; UPD_WAITING = true;
+  loading(true);
+  setTimeout(()=>{ // 30 秒还没回来就当失败，避免遮罩卡死
+    if(UPD_WAITING){ UPD_WAITING = false; loading(false); if(UPD_MANUAL) toast("检查超时"); }
+  }, 30000);
+  try{ bridge().checkAppUpdate(); }
+  catch(e){ UPD_WAITING = false; loading(false); if(manual) toast("检查失败："+e); }
+}
+function onUpdateResult(raw){
+  if(!UPD_WAITING) return;
+  UPD_WAITING = false; loading(false);
+  const manual = UPD_MANUAL;
+  let r;
+  try{ r = JSON.parse(raw); }catch(e){ if(manual) toast("解析失败"); return; }
+  if(!r || r.error || r.status !== 200){
+    if(manual) toast("检查失败：" + ((r && (r.error || ("HTTP " + r.status))) || "未知错误"));
+    return;
+  }
+  let rel;
+  try{ rel = JSON.parse(r.body); }catch(e){ if(manual) toast("解析失败"); return; }
+  const latest = (rel.tag_name || "").replace(/^v/, "");
+  if(!latest){ if(manual) toast("没取到版本信息"); return; }
+  let cur = "";
+  try{ cur = bridge().getAppVersion(); }catch(e){}
+  if(cmpVer(latest, cur) > 0){
+    const apk = (rel.assets || []).find(a=>a.name && a.name.endsWith(".apk"));
+    UPD_URL = apk ? apk.browser_download_url : rel.html_url;
+    $("updVer").textContent = "v" + latest;
+    $("updBody").textContent = (rel.body || "（无更新说明）").slice(0, 1200);
+    $("updateSheet").classList.add("show");
+  }else if(manual){
+    toast("已是最新版本（v" + cur + "）");
+  }
 }
 function closeUpdate(){ $("updateSheet").classList.remove("show"); }
 function doUpdateDownload(){ if(UPD_URL) bridge().openUrl(UPD_URL); }
