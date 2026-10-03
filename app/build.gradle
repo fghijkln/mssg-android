@@ -9,8 +9,8 @@ android {
         applicationId "com.mssg.app"
         minSdk 24
         targetSdk 34
-        versionCode 5
-        versionName "0.15.3"
+        versionCode 6
+        versionName "0.16.0"
 
         ndk {
             // 主流手机全覆盖；x86_64 供模拟器用

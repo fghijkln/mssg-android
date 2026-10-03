@@ -1,5 +1,5 @@
 {
-  "latest": "0.15.3",
-  "notes": "v0.15.3\n- 检查更新换数据源：GitHub API 对匿名请求 /releases/* 一律 404（连 facebook/react 都一样），改走仓库内 update.json，可靠\n- 更新检查逻辑不变：启动自动静默检查，抽屉可手动检查",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.15.3/app-debug.apk"
+  "latest": "0.16.0",
+  "notes": "v0.16.0\n- App 有图标了：藏青底 + 白色气泡文档\n- 修抽屉按钮点击时右侧白闪：loading 遮罩延迟 350ms 显示，快速操作不再闪",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.16.0/app-debug.apk"
 }
