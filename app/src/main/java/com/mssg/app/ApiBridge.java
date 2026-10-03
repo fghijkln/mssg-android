@@ -428,7 +428,9 @@ public class ApiBridge {
      * 经 WebView（Chromium 网络栈）发一次 HTTPS 请求，供 Python 的
      * cloudflare 备用传输调用。运行在 Chaquopy 后台线程。
      * 返回 JSON：{"status":200,"body":"..."} 或 {"error":"..."}。
+     * JS 也可以直接调（检查更新用）。
      */
+    @JavascriptInterface
     public String cfFetchSync(String method, String url, String headersJson,
                               String bodyB64, int timeoutSec) {
         final String reqId = java.util.UUID.randomUUID().toString();

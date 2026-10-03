@@ -79,6 +79,18 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .sheet-backdrop{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);display:none;
   align-items:flex-end;justify-content:center;}
 .sheet-backdrop.show{display:flex;}
+.drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:none;}
+.drawer-backdrop.show{display:block;}
+.drawer{position:fixed;top:0;left:0;bottom:0;width:272px;max-width:82vw;background:#fff;z-index:41;
+  transform:translateX(-106%);transition:transform .24s ease;overflow-y:auto;
+  padding:14px 12px calc(20px + env(safe-area-inset-bottom));box-shadow:2px 0 14px rgba(0,0,0,.18);}
+.drawer.open{transform:none;}
+.drawer-head{font-size:20px;font-weight:700;padding:6px 10px 10px;color:var(--primary);}
+.drawer-sec{font-size:12px;color:var(--muted);padding:14px 10px 4px;letter-spacing:1px;}
+.drawer-item{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;
+  padding:12px 10px;font-size:15px;border-radius:10px;cursor:pointer;text-align:left;color:var(--text);}
+.drawer-item:active{background:#f3f4f6;}
+.drawer-item small{color:var(--muted);font-size:12px;margin-left:auto;}
 .sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:640px;
   padding:20px 18px calc(24px + env(safe-area-inset-bottom));}
 .sheet h3{margin:0 0 14px;font-size:17px;}
@@ -92,14 +104,34 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 <body>
 
 <div class="appbar">
-  <h1>mssg</h1>
+  <div style="display:flex;align-items:center;gap:6px">
+    <button class="btn ghost" onclick="openDrawer()" aria-label="菜单">☰</button>
+    <h1>mssg</h1>
+  </div>
   <div class="actions">
-    <button class="btn ghost" onclick="openThemes()">🎨</button>
-    <button class="btn ghost" onclick="openExport()">导出</button>
     <button class="btn ghost" onclick="doPreview()">预览</button>
     <button class="btn ghost" onclick="doBuild()">构建</button>
   </div>
 </div>
+
+<div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
+<nav class="drawer" id="drawer">
+  <div class="drawer-head">mssg</div>
+  <div class="drawer-sec">内容</div>
+  <button class="drawer-item" onclick="closeDrawer();openEditor()">✏️ 新建文章</button>
+  <div class="drawer-sec">构建</div>
+  <button class="drawer-item" onclick="closeDrawer();doBuild()">🔨 构建站点</button>
+  <button class="drawer-item" onclick="closeDrawer();doPreview()">👁 预览站点</button>
+  <button class="drawer-item" onclick="closeDrawer();openFiles()">📁 浏览构建文件</button>
+  <button class="drawer-item" onclick="closeDrawer();doCleanBuild()">🧹 清除构建产物</button>
+  <div class="drawer-sec">发布</div>
+  <button class="drawer-item" onclick="closeDrawer();openExport()">📦 导出 ZIP</button>
+  <button class="drawer-item" onclick="closeDrawer();openCf()">☁️ 部署到 Cloudflare Pages</button>
+  <button class="drawer-item" onclick="closeDrawer();doBackupSite()">🗄️ 备份站点源码</button>
+  <div class="drawer-sec">设置</div>
+  <button class="drawer-item" onclick="closeDrawer();openThemes()">🎨 主题</button>
+  <button class="drawer-item" onclick="checkUpdate(true)">🔄 检查更新<small id="verLabelD"></small></button>
+</nav>
 
 <div class="list" id="list"></div>
 
@@ -177,7 +209,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 
 <div class="sheet-backdrop" id="exportSheet" onclick="if(event.target===this)closeExport()">
   <div class="sheet">
-    <h3>导出整站</h3>
+    <h3>导出 ZIP</h3>
     <div id="buildInfo" style="font-size:13px;color:var(--muted);margin:0 4px 8px"></div>
     <button class="theme-opt" onclick="doExportZip(true)">
       <span>💾</span><span>保存 ZIP 到下载<br><small style="color:var(--muted)">用于上传到 Cloudflare Pages / Netlify</small></span>
@@ -185,21 +217,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     <button class="theme-opt" onclick="doExportZip(false)">
       <span>📤</span><span>分享 ZIP<br><small style="color:var(--muted)">通过微信 / 邮件 / 云盘发送</small></span>
     </button>
-    <button class="theme-opt" onclick="openCf()">
-      <span>☁️</span><span>部署到 Cloudflare Pages<br><small style="color:var(--muted)">连接账号后一键上线（可选）</small></span>
-    </button>
-    <button class="theme-opt" onclick="openFiles()">
-      <span>📁</span><span>浏览构建文件<br><small style="color:var(--muted)">查看所有页面文件及大小，可单独删除</small></span>
-    </button>
-    <button class="theme-opt" onclick="checkUpdate(true)">
-      <span>🔄</span><span>检查更新<br><small style="color:var(--muted)" id="verLabel"></small></span>
-    </button>
-    <button class="theme-opt" onclick="doCleanBuild()">
-      <span>🧹</span><span>清除构建产物<br><small style="color:var(--muted)">删除 public/，文章和配置不受影响</small></span>
-    </button>
-    <button class="theme-opt" onclick="doBackupSite()">
-      <span>🗄️</span><span>备份站点源码<br><small style="color:var(--muted)">打包文章/配置/模板，不含 Token，发到微信/云盘/邮箱</small></span>
-    </button>
+    <div style="font-size:13px;color:var(--muted);margin:0 4px 8px">更多操作（部署、备份、构建文件、检查更新）已移到左上角 ☰ 菜单</div>
   </div>
 </div>
 
@@ -231,8 +249,14 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 
 <script>
 "use strict";
+function openDrawer(){ $("drawer").classList.add("open"); $("drawerBackdrop").classList.add("show"); }
+function closeDrawer(){ $("drawer").classList.remove("open"); $("drawerBackdrop").classList.remove("show"); }
 setTimeout(()=>{
-  try{ $("verLabel").textContent = "当前版本 v" + bridge().getAppVersion(); }catch(e){}
+  try{
+    const v = "当前版本 v" + bridge().getAppVersion();
+    const a = $("verLabel"); if(a) a.textContent = v;
+    const b = $("verLabelD"); if(b) b.textContent = v;
+  }catch(e){}
 }, 500);
 setTimeout(()=>checkUpdate(false), 3500);
 const $ = id => document.getElementById(id);
