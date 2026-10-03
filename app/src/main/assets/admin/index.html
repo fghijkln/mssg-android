@@ -473,12 +473,13 @@ function onBackupPicked(path, articles, sizeHuman){
     let r;
     try{ r = JSON.parse(bridge().restoreBackup(path)); }
     catch(e){ toast("恢复失败：" + e); return; }
-    if(r.ok){
-      toast("已恢复 " + r.articles + " 篇文章，重新构建即可预览", 3200);
-      refresh();
-    }else{
-      toast("恢复失败：" + r.msg, 3600);
-    }
+    if(!r.ok){ toast("恢复失败：" + r.msg, 3600); return; }
+    toast("已恢复 " + r.articles + " 篇文章，正在重新构建…", 3000);
+    let b;
+    try{ b = JSON.parse(bridge().buildSite()); }
+    catch(e){ toast("构建失败：" + e, 3600); refresh(); return; }
+    toast(b.ok ? ("恢复并构建完成：" + (b.msg || "")) : ("构建失败：" + b.msg), 3600);
+    refresh();
   });
 }
 
