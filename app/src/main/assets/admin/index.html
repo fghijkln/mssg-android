@@ -628,9 +628,10 @@ function onAiBuildResult(raw){
     catch(e){ toast("建站失败：" + e); return; }
     if(!rr.ok){ toast("建站失败：" + rr.msg); return; }
     $("aiBuildMsg").innerHTML = "已生成 <b>" + escHtml(rr.title || "") + "</b>，" +
-      rr.pages + " 个页面。可以预览看看，满意就设为我的站点。";
+      rr.pages + " 个页面。正在打开预览…返回后可点「设为我的站点」。";
     $("aiBuildResult").style.display = "block";
-    toast("建站完成");
+    toast("建站完成，正在打开预览");
+    setTimeout(()=>{ try{ bridge().previewAiSite(); }catch(e){ toast("预览失败：" + e); } }, 800);
   });
 }
 function aiPreview(){

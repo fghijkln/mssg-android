@@ -1,5 +1,5 @@
 {
-  "latest": "0.24.0",
-  "notes": "v0.24.0\n- ✨ AI 建站：一句话描述，AI 生成完整网站（配置+3-5 个页面+构建），可预览，满意一键设为我的站点",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.24.0/mssg.apk"
+  "latest": "0.24.1",
+  "notes": "v0.24.1\n- AI 建站：建完自动打开预览，不用再找按钮",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.24.1/mssg.apk"
 }
