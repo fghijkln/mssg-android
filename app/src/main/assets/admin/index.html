@@ -975,12 +975,12 @@ setTimeout(()=>{
     const b = $("verLabelD"); if(b) b.textContent = v;
   }catch(e){}
 }, 500);
-if(SELF_UPDATE) setTimeout(()=>checkUpdate(false), 3500);
 const $ = id => document.getElementById(id);
 const bridge = () => window.MssgApi;
 // 发行渠道开关：fdroid 版关闭应用内自更新（F-Droid 政策要求），默认开
 const SELF_UPDATE = (()=>{ try{ return bridge().selfUpdateEnabled(); }catch(e){ return true; } })();
 if(!SELF_UPDATE){ const b=$("drawerCheckUpdate"); if(b) b.style.display="none"; }
+if(SELF_UPDATE) setTimeout(()=>checkUpdate(false), 3500);
 let editingRel = null;
 
 function toast(msg, ms=2600){

@@ -59,6 +59,52 @@ jobs:
           print(f"桥接一致: JS {len(js_calls)} / Java {len(java_methods)} / Python {len(py_defs)}")
           EOF
 
+      # JS 顶层 TDZ 检查：const/let 在声明前被顶层语句直接引用会导致整个
+      # script 报 ReferenceError 后续代码全不执行（node --check 查不出，只能运行时发现）。
+      # 曾真实踩坑：if(SELF_UPDATE) 写在 const SELF_UPDATE 声明之前，App 点什么都没反应。
+      - name: Check JS top-level TDZ
+        run: |
+          python3 - <<'EOF'
+          import re
+          html = open("app/src/main/assets/admin/index.html", encoding="utf-8").read()
+          js = re.findall(r'<script>(.*?)</script>', html, re.S)[0]
+          js = re.sub(r'/\*.*?\*/', '', js, flags=re.S)
+          def strip(line):
+              line = re.sub(r'"(?:[^"\\]|\\.)*"', '""', line)
+              line = re.sub(r"'(?:[^'\\]|\\.)*'", "''", line)
+              line = re.sub(r'`(?:[^`\\]|\\.)*`', '``', line)
+              line = re.sub(r'//.*', '', line)
+              return line
+          lines = js.split('\n')
+          code_lines, depths = [], []
+          depth = 0
+          for ln in lines:
+              c = strip(ln)
+              code_lines.append(c); depths.append(depth)
+              depth += c.count('{') - c.count('}')
+          decls = {}
+          for i, c in enumerate(code_lines):
+              m = re.match(r'^(?:const|let)\s+([$\w]+)\s*=', c)
+              if m and depths[i] == 0:
+                  decls[m.group(1)] = i
+          bad = []
+          for name, dline in decls.items():
+              pat = re.compile(r'(?<![\w$])' + re.escape(name) + r'(?![\w$])')
+              for i in range(dline):
+                  if depths[i] != 0:
+                      continue
+                  for m in pat.finditer(code_lines[i]):
+                      if '{' in code_lines[i][:m.start()]:
+                          continue  # 同行 { 之后：函数体/回调内，延迟执行，安全
+                      bad.append((name, dline+1, i+1, code_lines[i].strip()[:70]))
+                      break
+                  else:
+                      continue
+                  break
+          assert not bad, "JS 顶层 TDZ 错误: %s" % bad
+          print(f"TDZ 检查通过: {len(decls)} 个顶层 const/let")
+          EOF
+
       - name: Restore release keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
