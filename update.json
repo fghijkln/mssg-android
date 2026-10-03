@@ -1,5 +1,5 @@
 {
-  "latest": "0.21.2",
-  "notes": "v0.21.2\n- 从备份恢复后自动重新构建，构建文件不再是空的",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.21.2/mssg.apk"
+  "latest": "0.21.3",
+  "notes": "v0.21.3\n- 新建文章时文件名只填了目录（如 post/）会自动补上文件名；没写 .md 后缀的自动补上\n- 保存失败不再甩 traceback，只显示人话",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.21.3/mssg.apk"
 }

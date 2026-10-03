@@ -71,6 +71,8 @@ def save_page(
         saved_rel = app.save_page(form)
         msg = app._rebuild()
         return _ok(msg=msg, rel=saved_rel)
+    except ValueError as e:
+        return _fail(str(e))
     except Exception:
         return _fail(traceback.format_exc(limit=3))
 

@@ -483,10 +483,18 @@ function onBackupPicked(path, articles, sizeHuman){
   });
 }
 
+function slugify(s){
+  const slug = (s || "").trim().toLowerCase()
+    .replace(/[\s_]+/g, "-").replace(/[^\w\u4e00-\u9fff-]+/g, "")
+    .replace(/-+/g, "-").replace(/^-|-$/g, "");
+  return slug || ("post-" + Date.now().toString(36));
+}
 function doSave(){
-  const rel = $("f_rel").value.trim();
+  let rel = $("f_rel").value.trim();
   const title = $("f_title").value.trim();
   if(!rel || !title){ toast("标题和文件名不能为空"); return; }
+  if(rel.endsWith("/")){ rel = rel + slugify(title) + ".md"; $("f_rel").value = rel; }
+  else if(!rel.toLowerCase().endsWith(".md")){ rel = rel + ".md"; $("f_rel").value = rel; }
   withLoading(()=>{
     let r;
     try{
