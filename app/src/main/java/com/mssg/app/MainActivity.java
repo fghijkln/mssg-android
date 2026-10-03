@@ -1,6 +1,7 @@
 package com.mssg.app;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -19,6 +20,7 @@ import java.io.File;
 public class MainActivity extends Activity {
 
     private WebView wv;
+    private ApiBridge bridge;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,7 +44,7 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(true);
         // 允许本地页面跨域访问 API（Cloudflare 备用网络通道用）
         s.setAllowUniversalAccessFromFileURLs(true);
-        ApiBridge bridge = new ApiBridge(this, wv, siteDir.getAbsolutePath());
+        bridge = new ApiBridge(this, wv, siteDir.getAbsolutePath());
         wv.addJavascriptInterface(bridge, "MssgApi");
         // 注册 WebView 网络通道为 Cloudflare 备用传输
         try {
@@ -52,6 +54,12 @@ public class MainActivity extends Activity {
         // 让 JS 的 confirm()/alert() 能弹窗（删除文章/清除构建产物用）
         wv.setWebChromeClient(new WebChromeClient());
         wv.loadUrl("file:///android_asset/admin/index.html");
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (bridge != null) bridge.onImagePicked(requestCode, resultCode, data);
     }
 
     @Override

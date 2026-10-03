@@ -1,5 +1,5 @@
 {
-  "latest": "0.17.0",
-  "notes": "v0.17.0\n- 应用内更新：点更新后直接在 App 里下载，完成后自动调起安装，不用再跳浏览器\n- 固定签名：以后覆盖安装不再要求先卸载（注意：这次需要最后手动卸载一次）\n- 修抽屉里点“检查更新”后抽屉不自动收回",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.17.0/mssg.apk"
+  "latest": "0.18.0",
+  "notes": "v0.18.0\n- 编辑器 Markdown 工具栏：标题/加粗/斜体/链接/图片/列表/引用/代码，一键插入\n- 从相册插入图片：自动存入文章同目录（page bundle），过大自动缩到 1600 宽，构建时同步到页面目录",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.18.0/mssg.apk"
 }

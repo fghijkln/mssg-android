@@ -268,6 +268,32 @@ def delete_build_file(site_dir: str, rel: str) -> str:
         return _fail(traceback.format_exc(limit=3))
 
 
+def import_bundle_image(site_dir: str, tmp_path: str, rel: str) -> str:
+    """把外部图片导入文章的 page bundle 目录（与 md 同目录），返回文件名。
+
+    图片过大时自动缩到 1600 宽（复用构建的图片管线）。
+    """
+    try:
+        import time
+
+        from mssg import images as _images
+
+        site = Path(site_dir)
+        content_root = (site / "content").resolve()
+        target_dir = (content_root / Path(rel).parent).resolve()
+        if target_dir != content_root and content_root not in target_dir.parents:
+            return _fail("非法路径")
+        tmp = Path(tmp_path)
+        if not _images.is_image(tmp):
+            return _fail("不是图片文件")
+        target_dir.mkdir(parents=True, exist_ok=True)
+        name = "img-%s%s" % (time.strftime("%Y%m%d-%H%M%S"), tmp.suffix.lower())
+        _images.copy_static_file(tmp, target_dir / name, 1600, 82)
+        return _ok(name=name)
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
 def export_page_html(site_dir: str, rel: str) -> str:
     """构建并返回单篇文章的 HTML 文件路径。"""
     try:

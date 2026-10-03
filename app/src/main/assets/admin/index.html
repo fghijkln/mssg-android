@@ -79,6 +79,10 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .sheet-backdrop{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);display:none;
   align-items:flex-end;justify-content:center;}
 .sheet-backdrop.show{display:flex;}
+.mdbar{display:flex;gap:6px;overflow-x:auto;padding:8px 2px;margin-bottom:2px;}
+.mdbar button{flex:0 0 auto;min-width:40px;height:36px;border:1px solid #e5e7eb;background:#f9fafb;
+  border-radius:9px;font-size:15px;font-weight:700;color:var(--text);cursor:pointer;padding:0 10px;}
+.mdbar button:active{background:#eef2ff;border-color:var(--primary);}
 .drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:none;}
 .drawer-backdrop.show{display:block;}
 .drawer{position:fixed;top:0;left:0;bottom:0;width:272px;max-width:82vw;background:#fff;z-index:41;
@@ -176,6 +180,17 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     </div>
     <div class="field">
       <label>正文（Markdown）</label>
+      <div class="mdbar">
+        <button type="button" onclick="mdLinePrefix('## ')" title="标题">H</button>
+        <button type="button" onclick="mdWrap('**','**','加粗')" title="加粗">B</button>
+        <button type="button" onclick="mdWrap('*','*','斜体')" title="斜体"><i>I</i></button>
+        <button type="button" onclick="mdLink()" title="链接">🔗</button>
+        <button type="button" onclick="mdImageUrl()" title="图片链接">🖼️</button>
+        <button type="button" onclick="pickImage()" title="从相册插入">📷</button>
+        <button type="button" onclick="mdLinePrefix('- ')" title="列表">☰</button>
+        <button type="button" onclick="mdLinePrefix('> ')" title="引用">❝</button>
+        <button type="button" onclick="mdWrap('`','`','代码')" title="行内代码">‹›</button>
+      </div>
       <textarea id="f_body" placeholder="# 标题&#10;&#10;正文…"></textarea>
     </div>
   </div>
@@ -347,6 +362,65 @@ function openEditor(rel){
   $("editor").classList.add("open");
 }
 function closeEditor(){ $("editor").classList.remove("open"); }
+
+/* Markdown 工具栏 */
+function mdArea(){ return $("f_body"); }
+function mdInsert(text){
+  const ta = mdArea();
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  ta.value = ta.value.slice(0, s) + text + ta.value.slice(e);
+  ta.selectionStart = ta.selectionEnd = s + text.length;
+  ta.focus();
+}
+function mdWrap(before, after, placeholder){
+  const ta = mdArea();
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  const sel = ta.value.slice(s, e) || placeholder;
+  ta.value = ta.value.slice(0, s) + before + sel + after + ta.value.slice(e);
+  ta.selectionStart = s + before.length;
+  ta.selectionEnd = s + before.length + sel.length;
+  ta.focus();
+}
+function mdLinePrefix(prefix){
+  // 当前行行首加前缀（已有则去掉）
+  const ta = mdArea();
+  const s = ta.selectionStart, v = ta.value;
+  const ls = v.lastIndexOf("\n", s - 1) + 1;
+  let le = v.indexOf("\n", s); if(le === -1) le = v.length;
+  const line = v.slice(ls, le);
+  let nline, delta;
+  if(line.startsWith(prefix)){ nline = line.slice(prefix.length); delta = -prefix.length; }
+  else { nline = prefix + line; delta = prefix.length; }
+  ta.value = v.slice(0, ls) + nline + v.slice(le);
+  ta.selectionStart = ta.selectionEnd = Math.max(ls, s + delta);
+  ta.focus();
+}
+function mdLink(){
+  const ta = mdArea();
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  const sel = ta.value.slice(s, e) || "链接文字";
+  const ins = "[" + sel + "]()";
+  ta.value = ta.value.slice(0, s) + ins + ta.value.slice(e);
+  ta.selectionStart = ta.selectionEnd = s + ins.length - 1; // 光标进括号填 URL
+  ta.focus();
+}
+function mdImageUrl(){
+  mdInsert("![图片]()");
+  const ta = mdArea();
+  ta.selectionStart = ta.selectionEnd = ta.selectionStart - 1; // 光标进括号填 URL
+  ta.focus();
+}
+function pickImage(){
+  const rel = $("f_rel").value.trim();
+  if(!rel){ toast("请先填写文件名，再插入图片"); return; }
+  try{ bridge().pickImage(rel); }
+  catch(e){ toast("打不开相册：" + e); }
+}
+function onImagePicked(name){
+  if(!name) return;
+  mdInsert("\n![图片](" + name + ")\n");
+  toast("图片已插入");
+}
 
 function doSave(){
   const rel = $("f_rel").value.trim();
