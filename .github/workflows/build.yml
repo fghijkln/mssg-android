@@ -126,6 +126,7 @@ jobs:
           CODE=$(git rev-list --count HEAD)
           echo "Building versionName=$VER versionCode=$CODE (tag $TAG)"
           gradle assembleRelease --console=plain -PappVersionName="$VER" -PappVersionCode="$CODE"
+          gradle assembleDebug --console=plain -PappVersionName="$VER" -PappVersionCode="$CODE"
 
       - name: Upload APK (github flavor)
         uses: actions/upload-artifact@v4
@@ -138,3 +139,15 @@ jobs:
         with:
           name: mssg-apk-fdroid
           path: app/build/outputs/apk/fdroid/release/app-fdroid-release.apk
+
+      - name: Upload APK (github flavor, debug)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mssg-apk-debug
+          path: app/build/outputs/apk/github/debug/app-github-debug.apk
+
+      - name: Upload APK (fdroid flavor, debug)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mssg-apk-fdroid-debug
+          path: app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk
