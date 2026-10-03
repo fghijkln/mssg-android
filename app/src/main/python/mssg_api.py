@@ -142,14 +142,14 @@ def set_theme(site_dir: str, theme: str) -> str:
             return _fail("mssg.toml 里找不到 theme 配置项")
         with open(toml_path, "w", encoding="utf-8") as f:
             f.write(new_text)
+        # 只换配置，不自动构建（用户手动点构建）
         # 切换主题时清除自定义 CSS，避免旧样式串到新主题上
         custom = Path(site_dir) / "static" / "style.css"
+        cleared = ""
         if custom.is_file():
             custom.unlink()
-            msg = _app(site_dir)._rebuild()
-            return _ok(msg=msg + "（已清除自定义 CSS）", theme=theme)
-        msg = _app(site_dir)._rebuild()
-        return _ok(msg=msg, theme=theme)
+            cleared = "（已清除自定义 CSS）"
+        return _ok(msg="已切换为「%s」%s，下次构建生效" % (theme, cleared), theme=theme)
     except Exception:
         return _fail(traceback.format_exc(limit=3))
 

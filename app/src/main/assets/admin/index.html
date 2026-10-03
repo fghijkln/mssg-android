@@ -109,7 +109,8 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:none;}
 .drawer-backdrop.show{display:block;}
 .drawer{position:fixed;top:0;left:0;bottom:0;width:272px;max-width:82vw;background:var(--card);z-index:41;
-  transform:translateX(-106%);transition:transform .24s ease;overflow-y:auto;
+  transform:translateX(-106%);transition:transform .24s ease;overflow-y:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;touch-action:pan-y;
   padding:14px 12px calc(20px + env(safe-area-inset-bottom));box-shadow:2px 0 14px rgba(0,0,0,.18);}
 .drawer.open{transform:none;}
 .drawer-head{font-size:20px;font-weight:700;padding:6px 10px 10px;color:var(--primary);}
@@ -169,11 +170,11 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   <button class="drawer-item" onclick="closeDrawer();pickBackup()">📥 从备份恢复</button>
   <div class="drawer-sec">设置</div>
   <button class="drawer-item" onclick="toggleTheme()">🌙 深色模式<small id="themeLabel"></small></button>
-  <button class="drawer-item" onclick="closeDrawer();openThemes()">🎨 主题</button>
   <button class="drawer-item" onclick="closeDrawer();openPlugins()">🧩 扩展商店</button>
   <button class="drawer-item" onclick="closeDrawer();checkUpdate(true)">🔄 检查更新<small id="verLabelD"></small></button>
 </nav>
 
+<div id="homeThemes" style="padding:10px 14px 0"></div>
 <div class="list" id="list"></div>
 
 <button class="fab" onclick="openEditor()" aria-label="新建">＋</button>
@@ -442,6 +443,7 @@ function esc(s){
 
 function refresh(){
   let r;
+  try{ renderHomeThemes(); }catch(e){}
   try{ r = JSON.parse(bridge().listPages()); }
   catch(e){ toast("引擎未就绪："+e); return; }
   if(!r.ok){ toast(r.msg); return; }
@@ -1127,6 +1129,27 @@ function doPreview(){
 
 /* 主题 */
 const THEME_DOTS = {company:"#1d4ed8", minimal:"#9ca3af", novacore:"#0a0f22"};
+function renderHomeThemes(){
+  let r, cur = null;
+  try{ r = JSON.parse(bridge().listThemes()); }catch(e){ return; }
+  if(!r.ok) return;
+  try{ cur = JSON.parse(bridge().getTheme()).theme; }catch(e){}
+  const themes = r.themes || [];
+  if(!themes.length) return;
+  $("homeThemes").innerHTML =
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:6px">🎨 主题</div>' +
+    '<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">' +
+    themes.map(x => {
+      const dot = (typeof THEME_DOTS !== "undefined" && THEME_DOTS[x.id]) || "#6b7280";
+      const on = x.id === cur;
+      return '<button onclick="pickTheme(\'' + x.id.replace(/\\/g,"\\\\").replace(/\'/g,"\\'") + '\')" ' +
+        'style="flex-shrink:0;display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:20px;border:1px solid ' +
+        (on ? "var(--primary)" : "var(--input-border)") + ';background:' +
+        (on ? "var(--active-bg)" : "var(--card)") + ';font-size:14px;cursor:pointer">' +
+        '<span style="width:12px;height:12px;border-radius:50%;background:' + dot + ';flex-shrink:0"></span>' +
+        esc(x.name) + (on ? " ✓" : "") + '</button>';
+    }).join("") + '</div>';
+}
 function openThemes(){
   let r;
   try{ r = JSON.parse(bridge().listThemes()); }
@@ -1155,7 +1178,8 @@ function pickTheme(id){
     let r;
     try{ r = JSON.parse(bridge().setTheme(id)); }
     catch(e){ toast("切换失败："+e); return; }
-    toast(r.ok ? ("已切换，" + (r.msg||"")) : r.msg);
+    toast(r.ok ? (r.msg || "已切换") : r.msg);
+    if(r.ok) renderHomeThemes();
   });
 }
 
