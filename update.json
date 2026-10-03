@@ -1,5 +1,5 @@
 {
-  "latest": "0.22.0",
-  "notes": "v0.22.0\n- 扩展商店：抽屉「🧩 扩展商店」，从 mssg-plugins 仓库一键安装/删除 shortcode 插件，插件不进 APK",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.22.0/mssg.apk"
+  "latest": "0.22.1",
+  "notes": "v0.22.1\n- 修扩展商店：补上 ApiBridge 的三个 Java 方法（漏了桥接层，报 is not a function）",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.22.1/mssg.apk"
 }

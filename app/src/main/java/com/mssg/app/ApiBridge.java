@@ -119,6 +119,33 @@ public class ApiBridge {
     }
 
     @JavascriptInterface
+    public String listInstalledPlugins() {
+        try {
+            return api().callAttr("list_installed_plugins", siteDir).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String installPluginFile(String name, String content) {
+        try {
+            return api().callAttr("install_plugin_file", siteDir, name, content).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String deletePlugin(String name) {
+        try {
+            return api().callAttr("delete_plugin", siteDir, name).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
     public String buildSite() {
         try {
             return api().callAttr("build_site", siteDir).toString();
