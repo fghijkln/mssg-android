@@ -41,6 +41,12 @@ public class ApiBridge {
     private final WebView wv;
     private final String siteDir;
 
+    // App 界面语言（JS setAppLang 同步），Java 侧 toast 双语用
+    private String appLang = "zh";
+    private String tr(String zh, String en) {
+        return "en".equals(appLang) ? en : zh;
+    }
+
     // WebView 网络通道：reqId -> 数据
     private final java.util.Map<String, byte[]> cfBodies = new java.util.HashMap<>();
     private final java.util.Map<String, java.util.concurrent.CountDownLatch> cfLatches =
@@ -426,6 +432,7 @@ public class ApiBridge {
     @JavascriptInterface
     public String setAppLang(String lang) {
         try {
+            appLang = "en".equals(lang) ? "en" : "zh";
             return api().callAttr("set_app_lang", lang).toString();
         } catch (Exception e) {
             return fail(e);
@@ -664,16 +671,16 @@ public class ApiBridge {
                             Uri.parse("package:" + activity.getPackageName()));
                     activity.startActivity(i);
                 } catch (Exception ignored) {}
-                toast("请允许“安装未知应用”，然后再点下载更新");
+                toast(tr("请允许“安装未知应用”，然后再点下载更新", "Please allow \"Install unknown apps\", then tap Download & Install again"));
                 return;
             }
         } catch (Exception e) {
-            toast("检查安装权限失败：" + e.getMessage());
+            toast(tr("检查安装权限失败：", "Failed to check install permission: ") + e.getMessage());
             return;
         }
         synchronized (this) {
             if (dlActive) {
-                toast("正在下载更新，请稍候…");
+                toast(tr("正在下载更新，请稍候…", "Downloading update, please wait…"));
                 return;
             }
             dlActive = true;
@@ -700,7 +707,7 @@ public class ApiBridge {
             dlReceived = 0;
             dlTotal = -1;
             dlLastPct = -1;
-            toast("开始下载更新…");
+            toast(tr("开始下载更新…", "Starting download…"));
             String js = "(async()=>{try{"
                     + "const r=await fetch(" + JSONObject.quote(url) + ");"
                     + "if(!r.ok) throw new Error('HTTP '+r.status);"
@@ -744,7 +751,7 @@ public class ApiBridge {
                 int pct = (int) (dlReceived * 100 / dlTotal);
                 if (pct >= dlLastPct + 25) {
                     dlLastPct = pct;
-                    toast("下载中 " + pct + "%…");
+                    toast(tr("下载中 ", "Downloading ") + pct + "%…");
                 }
             }
         } catch (Exception e) {
@@ -783,10 +790,10 @@ public class ApiBridge {
             }
             try {
                 if (dlUri == null) {
-                    toast("安装失败：找不到文件");
+                    toast(tr("安装失败：找不到文件", "Install failed: file not found"));
                     return;
                 }
-                toast("下载完成，正在调起安装…");
+                toast(tr("下载完成，正在调起安装…", "Download complete, launching installer…"));
                 Intent install = new Intent(Intent.ACTION_VIEW);
                 install.setDataAndType(dlUri,
                         "application/vnd.android.package-archive");
@@ -794,7 +801,7 @@ public class ApiBridge {
                         | Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 activity.startActivity(install);
             } catch (Exception e) {
-                toast("调起安装失败：" + e.getMessage());
+                toast(tr("调起安装失败：", "Failed to launch installer: ") + e.getMessage());
             }
         });
     }

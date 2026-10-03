@@ -525,6 +525,9 @@ zh: {
   "msg.confirm_del_plugin": "删除插件「{name}」？",
   "msg.confirm_del_ai_plugin": "删除 AI 插件「{name}」？",
   "msg.unknown_error": "未知错误",
+  "msg.check_fail": "检查失败：",
+  "msg.no_notes": "（无更新说明）",
+  "msg.up_to_date": "已是最新版本（v",
   "theme.css_in_use": "（使用中）",
   "ai.theme_auto": "让 AI 选",
   "build_dialog.title": "构建为项目",
@@ -659,6 +662,9 @@ en: {
   "msg.confirm_del_plugin": "Delete plugin \"{name}\"?",
   "msg.confirm_del_ai_plugin": "Delete AI plugin \"{name}\"?",
   "msg.unknown_error": "Unknown error",
+  "msg.check_fail": "Check failed: ",
+  "msg.no_notes": "(No release notes)",
+  "msg.up_to_date": "Already up to date (v",
   "theme.css_in_use": " (in use)",
   "ai.theme_auto": "Let AI choose",
   "build_dialog.title": "Build as Project",
@@ -1689,7 +1695,7 @@ function checkUpdate(manual){
     if(UPD_WAITING){ UPD_WAITING = false; loading(false); if(UPD_MANUAL) toast(t("msg.check_timeout")); }
   }, 30000);
   try{ bridge().fetchText("update", UPDATE_JSON_URL); }
-  catch(e){ UPD_WAITING = false; loading(false); if(manual) toast("检查失败："+e); }
+  catch(e){ UPD_WAITING = false; loading(false); if(manual) toast(t("msg.check_fail")+e); }
 }
 function onFetchText(tag, raw){
   if(tag === "plugins"){ onPluginsFetched(raw); return; }
@@ -1703,7 +1709,7 @@ function onFetchText(tag, raw){
   let r;
   try{ r = JSON.parse(raw); }catch(e){ if(manual) toast(t("msg.parse_fail")); return; }
   if(!r || r.error || r.status !== 200){
-    if(manual) toast("检查失败：" + ((r && (r.error || ("HTTP " + r.status))) || "未知错误"));
+    if(manual) toast(t("msg.check_fail") + ((r && (r.error || ("HTTP " + r.status))) || t("msg.unknown_error")));
     return;
   }
   let j;
@@ -1716,10 +1722,10 @@ function onFetchText(tag, raw){
     UPD_URL = j.apk ||
       ("https://github.com/fghijkln/mssg-android/releases/tag/v" + latest);
     $("updVer").textContent = "v" + latest;
-    $("updBody").textContent = String(j.notes || "（无更新说明）").slice(0, 1200);
+    $("updBody").textContent = String((APP_LANG==="en" && j.notes_en) ? j.notes_en : (j.notes || t("msg.no_notes"))).slice(0, 1200);
     $("updateSheet").classList.add("show");
   }else if(manual){
-    toast("已是最新版本（v" + cur + "）");
+    toast(t("msg.up_to_date") + cur + ")");
   }
 }
 function closeUpdate(){ $("updateSheet").classList.remove("show"); }
@@ -1727,7 +1733,7 @@ function doUpdateDownload(){
   if(!UPD_URL) return;
   closeUpdate();
   try{ bridge().downloadUpdate(UPD_URL); }
-  catch(e){ toast("下载失败：" + e); }
+  catch(e){ toast(t("msg.download_fail") + e); }
 }
 function closeExport(){ $("exportSheet").classList.remove("show"); }
 function doBackupSite(){

@@ -1,39 +1,41 @@
-# WebWeave (mssg Android)
+# WebWeave for Android
 
-手机上的静态站点生成器。写文章、换主题、构建、预览、部署，全在手机上完成——Hugo 做不到的事。
+[中文](README_CN.md) | English
 
-核心引擎是 [mssg](https://github.com/fghijkln/mssg)（自研 Python 静态站点生成器）。
+A static site generator that runs entirely on your phone. Write articles, switch themes, build, preview, and deploy — all without a desktop. Things Hugo can't do on mobile.
 
-## 功能
+The core engine is [mssg](https://github.com/fghijkln/mssg), a self-built Python static site generator.
 
-- ✍️ 文章管理：新建 / 编辑 / 删除 Markdown 文章（标题、日期、标签、分类、草稿）
-- 🎨 三套主题：company（公司站）/ minimal（极简）/ novacore（深色科技风），支持自定义 CSS
-- 🔨 一键构建 + 本地预览
-- 📦 导出：整站 ZIP（保存到下载 / 分享）、单篇文章 HTML 分享
-- ☁️ Cloudflare Pages 一键部署（可选）：API Token 连接后建项目、上传、轮询一次搞定；支持项目列表切换与部署状态查看
-- 🗄️ 站点源码备份：一键打包分享到微信 / 云盘 / 邮箱，换机不丢站
+## Features
 
-## 安装
+- ✍️ Article management: create / edit / delete Markdown articles (title, date, tags, categories, drafts)
+- 🎨 Three built-in themes: company / minimal / novacore, with custom CSS support
+- 🔨 One-tap build + local preview
+- 📦 Export: full-site ZIP (save to Downloads / share), single-article HTML sharing
+- ☁️ Cloudflare Pages one-click deploy (optional): connect with an API Token, then create project, upload, and poll in one go; project list switching and deployment status included
+- 🗄️ Site source backup: one-tap archive shared to WeChat / cloud storage / email — switch phones without losing your site
 
-到 [Releases](../../releases) 下载最新版 `app-debug.apk` 安装（Android 7.0+）。
+## Install
 
-Token 只存在手机本地，不上传任何服务器。
+Download the latest `app-debug.apk` from [Releases](../../releases) and install (Android 7.0+).
 
-## 架构
+API tokens are stored on the device only. Nothing is uploaded to any server.
 
-- WebView 加载 APK 内置的移动端管理界面（`app/src/main/assets/admin/`）
-- Java `ApiBridge`（`@JavascriptInterface`）直调 Chaquopy Python，没有 localhost HTTP 服务
-- Python 侧（`app/src/main/python/`）复用 mssg 核心：构建、主题、部署、备份
-- 网络走系统 WebView 网络栈：DNS 被污染时自动切 DoH，极端情况下用 WebView fetch 兜底——v0.13.x 在真机上验证过
+## Architecture
 
-## 构建
+- A WebView loads the built-in mobile admin UI (`app/src/main/assets/admin/`)
+- Java `ApiBridge` (`@JavascriptInterface`) calls Chaquopy Python directly — no localhost HTTP service
+- The Python side (`app/src/main/python/`) reuses the mssg core: build, themes, deploy, backup
+- Networking goes through the system WebView stack: automatically switches to DoH when DNS is poisoned, with a WebView fetch fallback for edge cases — verified on real devices in v0.13.x
+
+## Build
 
 ```bash
 ./gradlew assembleDebug
 ```
 
-APK 二进制不进仓库；打 tag 后 GitHub Actions 自动构建并发布到 Release。
+APK binaries are not committed to the repo; pushing a tag triggers GitHub Actions to build and publish to Releases.
 
-## 许可
+## License
 
 MIT
