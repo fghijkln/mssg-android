@@ -418,7 +418,6 @@ public class ApiBridge {
         return name != null && name.matches("[A-Za-z0-9_-]{1,64}");
     }
 
-    @JavascriptInterface
     /**
      * 通用插件宿主接口：返回所有已安装插件的 manifest。
      * APK 不解析插件类型，只透传 manifest；具体渲染由 JS PluginHost 按
