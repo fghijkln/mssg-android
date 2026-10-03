@@ -230,6 +230,44 @@ def get_build_info(site_dir: str) -> str:
         return _fail(traceback.format_exc(limit=3))
 
 
+def list_build_files(site_dir: str) -> str:
+    """列出构建产物所有文件：相对路径、大小（按路径排序）。"""
+    try:
+        public = _output_dir(site_dir)
+        if not public.is_dir():
+            return _ok(exists=False, files=[], count=0)
+        items = []
+        for f in sorted(public.rglob("*")):
+            if f.is_file():
+                size = f.stat().st_size
+                items.append({"path": f.relative_to(public).as_posix(),
+                              "size": size, "size_human": _human_size(size)})
+        total = sum(i["size"] for i in items)
+        return _ok(exists=True, files=items, count=len(items),
+                   total_human=_human_size(total))
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def delete_build_file(site_dir: str, rel: str) -> str:
+    """删除构建产物中的单个文件（防 ../ 穿出），顺手清理空目录。"""
+    try:
+        public = _output_dir(site_dir).resolve()
+        target = (public / rel).resolve()
+        if target != public and public not in target.parents:
+            return _fail("非法路径")
+        if not target.is_file():
+            return _fail("文件不存在")
+        target.unlink()
+        p = target.parent
+        while p != public and p.is_dir() and not any(p.iterdir()):
+            p.rmdir()
+            p = p.parent
+        return _ok()
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
 def export_page_html(site_dir: str, rel: str) -> str:
     """构建并返回单篇文章的 HTML 文件路径。"""
     try:

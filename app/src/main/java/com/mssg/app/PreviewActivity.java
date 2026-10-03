@@ -106,7 +106,9 @@ public class PreviewActivity extends Activity {
                 }
             }
         });
-        wv.loadUrl("https://" + HOST + "/");
+        String startPath = getIntent().getStringExtra("startPath");
+        if (startPath == null || startPath.isEmpty()) startPath = "/";
+        wv.loadUrl("https://" + HOST + startPath);
     }
 
     private static String mimeOf(String name) {

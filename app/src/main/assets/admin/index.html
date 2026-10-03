@@ -188,12 +188,37 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     <button class="theme-opt" onclick="openCf()">
       <span>☁️</span><span>部署到 Cloudflare Pages<br><small style="color:var(--muted)">连接账号后一键上线（可选）</small></span>
     </button>
+    <button class="theme-opt" onclick="openFiles()">
+      <span>📁</span><span>浏览构建文件<br><small style="color:var(--muted)">查看所有页面文件及大小，可单独删除</small></span>
+    </button>
+    <button class="theme-opt" onclick="checkUpdate(true)">
+      <span>🔄</span><span>检查更新<br><small style="color:var(--muted)" id="verLabel"></small></span>
+    </button>
     <button class="theme-opt" onclick="doCleanBuild()">
       <span>🧹</span><span>清除构建产物<br><small style="color:var(--muted)">删除 public/，文章和配置不受影响</small></span>
     </button>
     <button class="theme-opt" onclick="doBackupSite()">
       <span>🗄️</span><span>备份站点源码<br><small style="color:var(--muted)">打包文章/配置/模板，不含 Token，发到微信/云盘/邮箱</small></span>
     </button>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="filesSheet" onclick="if(event.target===this)closeFiles()">
+  <div class="sheet" style="max-height:82vh;display:flex;flex-direction:column">
+    <h3>构建文件 <small id="filesTotal" style="color:var(--muted);font-weight:400"></small></h3>
+    <div id="filesList" style="overflow-y:auto;margin:0 -4px 8px"></div>
+    <button class="btn ghost" onclick="closeFiles()">关闭</button>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="updateSheet" onclick="if(event.target===this)closeUpdate()">
+  <div class="sheet">
+    <h3>🔄 发现新版本 <span id="updVer"></span></h3>
+    <div id="updBody" style="font-size:14px;color:var(--muted);white-space:pre-wrap;max-height:30vh;overflow-y:auto;margin-bottom:12px"></div>
+    <button class="theme-opt" onclick="doUpdateDownload()">
+      <span>⬇️</span><span>下载更新<br><small style="color:var(--muted)">用浏览器打开下载链接</small></span>
+    </button>
+    <button class="btn ghost" onclick="closeUpdate()">稍后</button>
   </div>
 </div>
 
@@ -206,6 +231,10 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 
 <script>
 "use strict";
+setTimeout(()=>{
+  try{ $("verLabel").textContent = "当前版本 v" + bridge().getAppVersion(); }catch(e){}
+}, 500);
+setTimeout(()=>checkUpdate(false), 3500);
 const $ = id => document.getElementById(id);
 const bridge = () => window.MssgApi;
 let editingRel = null;
@@ -384,6 +413,89 @@ function doCleanBuild(){
     toast(r.ok ? "已清除构建产物" : r.msg);
   });
 }
+
+/* 构建文件列表 */
+function openFiles(){
+  closeExport();
+  refreshFiles();
+  $("filesSheet").classList.add("show");
+}
+function closeFiles(){ $("filesSheet").classList.remove("show"); }
+function refreshFiles(){
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().listBuildFiles()); }
+    catch(e){ toast("读取失败："+e); return; }
+    if(!r.ok){ toast(r.msg); return; }
+    $("filesTotal").textContent = r.exists ? (r.count + " 个文件，共 " + r.total_human) : "";
+    if(!r.exists || !r.files.length){
+      $("filesList").innerHTML = '<div style="color:var(--muted);padding:18px 4px">还没有构建产物，先点「构建」</div>';
+      return;
+    }
+    $("filesList").innerHTML = r.files.map(f=>{
+      const isHtml = f.path.endsWith(".html");
+      return `<div class="theme-opt" style="padding:10px 12px;${isHtml?"cursor:pointer":""}"` +
+        (isHtml ? ` onclick="previewBuildFile('${esc(f.path)}')"` : "") + `>
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px">${esc(f.path)}</span>
+        <span style="color:var(--muted);font-size:13px;flex-shrink:0">${esc(f.size_human)}</span>
+        <button class="btn ghost" style="padding:4px 8px;flex-shrink:0" onclick="event.stopPropagation();doDeleteBuildFile('${esc(f.path)}')">删</button>
+      </div>`;
+    }).join("");
+  });
+}
+function doDeleteBuildFile(rel){
+  if(!confirm("删除构建文件「" + rel + "」？")) return;
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().deleteBuildFile(rel)); }
+    catch(e){ toast("删除失败："+e); return; }
+    toast(r.ok ? "已删除" : r.msg);
+    if(r.ok) refreshFiles();
+  });
+}
+function previewBuildFile(rel){ closeFiles(); bridge().previewBuildFile(rel); }
+
+/* 检查更新 */
+let UPD_URL = "";
+function cmpVer(a, b){
+  const pa = a.split(".").map(x=>parseInt(x)||0), pb = b.split(".").map(x=>parseInt(x)||0);
+  for(let i=0;i<Math.max(pa.length,pb.length);i++){
+    const d = (pa[i]||0) - (pb[i]||0);
+    if(d) return d;
+  }
+  return 0;
+}
+function checkUpdate(manual){
+  withLoading(()=>{
+    let cur = "";
+    try{ cur = bridge().getAppVersion(); }catch(e){}
+    let r;
+    try{
+      r = JSON.parse(bridge().cfFetchSync("GET",
+        "https://api.github.com/fghijkln/mssg-android/releases/latest",
+        '{"Accept":"application/vnd.github+json"}', "", 15));
+    }catch(e){ if(manual) toast("检查失败："+e); return; }
+    if(r.error || r.status !== 200){
+      if(manual) toast("检查失败：" + (r.error || ("HTTP " + r.status)));
+      return;
+    }
+    let rel;
+    try{ rel = JSON.parse(r.body); }catch(e){ if(manual) toast("解析失败"); return; }
+    const latest = (rel.tag_name || "").replace(/^v/, "");
+    if(!latest){ if(manual) toast("没取到版本信息"); return; }
+    if(cmpVer(latest, cur) > 0){
+      const apk = (rel.assets || []).find(a=>a.name && a.name.endsWith(".apk"));
+      UPD_URL = apk ? apk.browser_download_url : rel.html_url;
+      $("updVer").textContent = "v" + latest;
+      $("updBody").textContent = (rel.body || "（无更新说明）").slice(0, 1200);
+      $("updateSheet").classList.add("show");
+    }else if(manual){
+      toast("已是最新版本（v" + cur + "）");
+    }
+  });
+}
+function closeUpdate(){ $("updateSheet").classList.remove("show"); }
+function doUpdateDownload(){ if(UPD_URL) bridge().openUrl(UPD_URL); }
 function closeExport(){ $("exportSheet").classList.remove("show"); }
 function doBackupSite(){
   closeExport();

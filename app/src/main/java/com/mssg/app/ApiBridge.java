@@ -245,6 +245,50 @@ public class ApiBridge {
     }
 
     @JavascriptInterface
+    public String listBuildFiles() {
+        try {
+            return api().callAttr("list_build_files", siteDir).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public String deleteBuildFile(String rel) {
+        try {
+            return api().callAttr("delete_build_file", siteDir, rel).toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public void previewBuildFile(String rel) {
+        Intent intent = new Intent(activity, PreviewActivity.class);
+        intent.putExtra("siteDir", siteDir);
+        intent.putExtra("startPath", "/" + rel);
+        activity.startActivity(intent);
+    }
+
+    @JavascriptInterface
+    public String getAppVersion() {
+        try {
+            return activity.getPackageManager()
+                    .getPackageInfo(activity.getPackageName(), 0).versionName;
+        } catch (Exception e) {
+            return "0.0.0";
+        }
+    }
+
+    @JavascriptInterface
+    public void openUrl(String url) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            activity.startActivity(intent);
+        } catch (Exception ignored) {}
+    }
+
+    @JavascriptInterface
     public String exportPageHtml(String rel) {
         try {
             return api().callAttr("export_page_html", siteDir, rel).toString();

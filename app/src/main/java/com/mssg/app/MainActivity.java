@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebChromeClient;
 import android.webkit.WebViewClient;
 
 import com.chaquo.python.Python;
@@ -48,6 +49,8 @@ public class MainActivity extends Activity {
             py.getModule("mssg_api").callAttr("cf_enable_webview_transport", bridge);
         } catch (Exception ignored) {}
         wv.setWebViewClient(new WebViewClient());
+        // 让 JS 的 confirm()/alert() 能弹窗（删除文章/清除构建产物用）
+        wv.setWebChromeClient(new WebChromeClient());
         wv.loadUrl("file:///android_asset/admin/index.html");
     }
 
