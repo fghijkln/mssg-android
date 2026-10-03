@@ -311,13 +311,28 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     <div class="field"><label>API 地址</label><input type="text" id="ai_endpoint" placeholder="https://api.deepseek.com/v1"></div>
     <div class="field"><label>API Key</label><input type="password" id="ai_key" placeholder="sk-…"></div>
     <div class="field"><label>模型</label>
-      <div style="display:flex;gap:8px">
-        <input type="text" id="ai_model" list="ai_model_list" placeholder="deepseek-chat" style="flex:1">
-        <datalist id="ai_model_list"></datalist>
-        <button class="btn sm" onclick="fetchAiModels()" title="从接口拉取可选模型">🔄</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="ai_model" placeholder="deepseek-chat" style="flex:1">
+        <button class="btn sm" onclick="openModelPicker()" title="选择模型" style="font-size:18px;padding:8px 12px">☰</button>
       </div></div>
     <button class="btn" onclick="saveAiSettings()" style="margin-bottom:8px">保存设置</button>
     <button class="btn ghost" onclick="closeAi()">关闭</button>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="modelPicker" onclick="if(event.target===this)closeModelPicker()">
+  <div class="sheet" style="max-height:78vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="margin:0">可用模型列表</h3>
+      <button class="btn sm" onclick="fetchAiModels()" title="刷新" style="border-radius:50%;width:38px;height:38px;padding:0;font-size:16px">🔄</button>
+    </div>
+    <div class="field"><input type="text" id="modelSearch" placeholder="🔍 搜索模型" oninput="renderModelList()"></div>
+    <div id="modelList" style="overflow-y:auto;flex:1;min-height:120px;margin:0 -4px 8px"></div>
+    <div id="modelCount" style="font-size:13px;color:var(--muted);margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn ghost" onclick="closeModelPicker()" style="flex:1">关闭</button>
+      <button class="btn" id="modelConfirmBtn" onclick="confirmModel()" style="flex:1">确定</button>
+    </div>
   </div>
 </div>
 
@@ -707,10 +722,6 @@ function openAi(){
   $("ai_endpoint").value = s.endpoint || "";
   $("ai_key").value = s.key || "";
   $("ai_model").value = s.model || "";
-  try{
-    const cached = JSON.parse(localStorage.getItem("ai_models_cache") || "[]");
-    if(cached.length) renderAiModelList(cached);
-  }catch(e){}
   $("aiResultWrap").style.display = "none";
   AI_LAST_RESULT = "";
   loadAiActions();
@@ -733,21 +744,47 @@ function loadAiActions(){
     '<button class="btn sm" onclick="runAiAction(\'' + a.id.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">' +
     escHtml(a.label || a.id) + '</button>').join("");
 }
+let AI_MODELS = [];
+let AI_PICKED = "";
 function aiModelsUrl(){
   const s = aiSettings();
   const ep = ($("ai_endpoint").value || s.endpoint || "").replace(/\/+$/, "");
   return ep ? ep + "/models" : "";
 }
-function renderAiModelList(models){
-  const dl = $("ai_model_list");
-  dl.innerHTML = (models || []).map(m =>
-    '<option value="' + escHtml(m) + '">').join("");
+function openModelPicker(){
+  AI_PICKED = $("ai_model").value || "";
+  try{
+    const cached = JSON.parse(localStorage.getItem("ai_models_cache") || "[]");
+    if(cached.length && !AI_MODELS.length) AI_MODELS = cached;
+  }catch(e){}
+  $("modelSearch").value = "";
+  renderModelList();
+  $("modelPicker").classList.add("show");
+  if(!AI_MODELS.length) fetchAiModels(true);
 }
-async function fetchAiModels(){
+function closeModelPicker(){ $("modelPicker").classList.remove("show"); }
+function renderModelList(){
+  const kw = ($("modelSearch").value || "").toLowerCase();
+  const list = AI_MODELS.filter(m => m.toLowerCase().includes(kw));
+  $("modelList").innerHTML = list.length ? list.map(m =>
+    '<div class="card" onclick="AI_PICKED=\'' + m.replace(/\\/g,"\\\\").replace(/'/g,"\\'") +
+    '\';renderModelList()" style="display:flex;align-items:center;gap:10px;cursor:pointer">' +
+    '<span style="font-size:18px">' + (m === AI_PICKED ? "☑️" : "⬜") + '</span>' +
+    '<span style="flex:1;word-break:break-all">' + escHtml(m) + '</span></div>'
+  ).join("") : '<div style="color:var(--muted);text-align:center;padding:20px">' +
+    (AI_MODELS.length ? "没有匹配的模型" : "还没有模型列表，点右上 🔄 拉取") + '</div>';
+  $("modelCount").textContent = "已显示 " + list.length + " 个模型" + (AI_PICKED ? " · 已选：" + AI_PICKED : "");
+  $("modelConfirmBtn").textContent = "确定" + (AI_PICKED ? "（已选 1）" : "");
+}
+function confirmModel(){
+  if(AI_PICKED) $("ai_model").value = AI_PICKED;
+  closeModelPicker();
+}
+async function fetchAiModels(silent){
   const url = aiModelsUrl();
-  if(!url){ toast("请先填 API 地址"); return; }
+  if(!url){ if(!silent) toast("请先填 API 地址"); return; }
   const key = $("ai_key").value || aiSettings().key || "";
-  toast("正在拉取模型列表…");
+  if(!silent) toast("正在拉取模型列表…");
   try{
     const headers = {};
     if(key) headers["Authorization"] = "Bearer " + key;
@@ -757,11 +794,13 @@ async function fetchAiModels(){
     const data = j.data || j.models || [];
     const models = data.map(m => typeof m === "string" ? m : (m.id || m.name)).filter(Boolean);
     if(!models.length) throw new Error("列表为空");
-    renderAiModelList(models);
+    AI_MODELS = models;
     try{ localStorage.setItem("ai_models_cache", JSON.stringify(models)); }catch(e){}
-    toast("拉取到 " + models.length + " 个模型，下拉选择");
+    renderModelList();
+    if(!silent) toast("拉取到 " + models.length + " 个模型");
   }catch(e){
-    toast("拉取失败：" + e.message + "，可手动输入");
+    if(!silent) toast("拉取失败：" + e.message);
+    renderModelList();
   }
 }
 function saveAiSettings(){
