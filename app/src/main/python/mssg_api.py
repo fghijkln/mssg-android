@@ -395,6 +395,54 @@ def restore_backup(site_dir: str, zip_path: str) -> str:
         return _fail(traceback.format_exc(limit=3))
 
 
+def _valid_plugin_name(name: str) -> bool:
+    import re as _re
+
+    return bool(_re.match(r"^[A-Za-z0-9_-]{1,64}$", name or ""))
+
+
+def list_installed_plugins(site_dir: str) -> str:
+    """列出已安装的 shortcode 插件（templates/shortcodes/*.html）。"""
+    try:
+        d = Path(site_dir) / "templates" / "shortcodes"
+        plugins = []
+        if d.is_dir():
+            for f in sorted(d.glob("*.html")):
+                plugins.append({"name": f.stem, "size": f.stat().st_size})
+        return _ok(plugins=plugins)
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def install_plugin_file(site_dir: str, name: str, content: str) -> str:
+    """安装插件文件。content 由 App 经 WebView 下载得到；目标路径只
+    用校验过的 name 构造，不信任远端的 install_to（防路径穿越）。"""
+    try:
+        if not _valid_plugin_name(name):
+            return _fail("非法插件名")
+        if not content or not content.strip():
+            return _fail("插件文件为空")
+        d = Path(site_dir) / "templates" / "shortcodes"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / (name + ".html")).write_text(content, encoding="utf-8")
+        return _ok(name=name)
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
+def delete_plugin(site_dir: str, name: str) -> str:
+    """删除已安装的插件。"""
+    try:
+        if not _valid_plugin_name(name):
+            return _fail("非法插件名")
+        p = Path(site_dir) / "templates" / "shortcodes" / (name + ".html")
+        if p.is_file():
+            p.unlink()
+        return _ok(name=name)
+    except Exception:
+        return _fail(traceback.format_exc(limit=3))
+
+
 def export_page_html(site_dir: str, rel: str) -> str:
     """构建并返回单篇文章的 HTML 文件路径。"""
     try:

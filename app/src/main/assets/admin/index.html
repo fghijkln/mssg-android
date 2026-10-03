@@ -94,6 +94,12 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .sheet-backdrop{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);display:none;
   align-items:flex-end;justify-content:center;}
 .sheet-backdrop.show{display:flex;}
+.sheet .btn.ghost{background:var(--btn-sec-bg);color:var(--text);width:100%;}
+.plugin-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  border:1px solid var(--input-border);background:var(--card);border-radius:12px;
+  padding:12px 14px;margin-bottom:8px;font-size:15px;}
+.btn.sm{padding:6px 14px;font-size:14px;width:auto;}
+.btn.danger-btn.sm{background:var(--danger-bg);}
 #updLater{background:var(--btn-sec-bg);color:var(--text);width:100%;}
 
 .mdbar{display:flex;gap:6px;overflow-x:auto;padding:8px 2px;margin-bottom:2px;}
@@ -155,6 +161,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   <div class="drawer-sec">设置</div>
   <button class="drawer-item" onclick="toggleTheme()">🌙 深色模式<small id="themeLabel"></small></button>
   <button class="drawer-item" onclick="closeDrawer();openThemes()">🎨 主题</button>
+  <button class="drawer-item" onclick="closeDrawer();openPlugins()">🧩 扩展商店</button>
   <button class="drawer-item" onclick="closeDrawer();checkUpdate(true)">🔄 检查更新<small id="verLabelD"></small></button>
 </nav>
 
@@ -254,6 +261,17 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
       <span>📤</span><span>分享 ZIP<br><small style="color:var(--muted)">通过微信 / 邮件 / 云盘发送</small></span>
     </button>
     <div style="font-size:13px;color:var(--muted);margin:0 4px 8px">更多操作（部署、备份、构建文件、检查更新）已移到左上角 ☰ 菜单</div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="pluginSheet" onclick="if(event.target===this)closePlugins()">
+  <div class="sheet" style="max-height:82vh;display:flex;flex-direction:column">
+    <h3>🧩 扩展商店</h3>
+    <div class="drawer-sec">已安装</div>
+    <div id="pluginInstalled" style="margin-bottom:6px"></div>
+    <div class="drawer-sec">可安装 <small style="color:var(--muted)">mssg-plugins 仓库</small></div>
+    <div id="pluginAvailable" style="overflow-y:auto;margin:0 -4px 8px"></div>
+    <button class="btn ghost" onclick="closePlugins()">关闭</button>
   </div>
 </div>
 
@@ -489,6 +507,118 @@ function slugify(s){
     .replace(/-+/g, "-").replace(/^-|-$/g, "");
   return slug || ("post-" + Date.now().toString(36));
 }
+/* 扩展商店 */
+const PLUGINS_JSON_URL = "https://raw.githubusercontent.com/fghijkln/mssg-plugins/master/plugins.json";
+const PLUGINS_BASE = "https://raw.githubusercontent.com/fghijkln/mssg-plugins/master/";
+let PLUGINS_CACHE = null;
+let PENDING_PLUGIN = null;
+function escHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function openPlugins(){ $("pluginSheet").classList.add("show"); refreshPlugins(); }
+function closePlugins(){ $("pluginSheet").classList.remove("show"); }
+function installedPluginNames(){
+  try{
+    const r = JSON.parse(bridge().listInstalledPlugins());
+    if(r.ok) return (r.plugins || []).map(p => p.name);
+  }catch(e){}
+  return [];
+}
+function refreshPlugins(){
+  let installed = [];
+  try{
+    const r = JSON.parse(bridge().listInstalledPlugins());
+    if(r.ok) installed = r.plugins || [];
+    else toast(r.msg);
+  }catch(e){ toast("读取已安装插件失败：" + e); }
+  renderInstalledPlugins(installed);
+  if(PLUGINS_CACHE){ renderAvailablePlugins(PLUGINS_CACHE, installed); }
+  else{
+    $("pluginAvailable").innerHTML = '<div style="color:var(--muted);font-size:14px">正在加载插件列表…</div>';
+    try{ bridge().fetchText("plugins", PLUGINS_JSON_URL); }
+    catch(e){ $("pluginAvailable").innerHTML = '<div style="color:var(--danger);font-size:14px">加载失败：' + escHtml(e) + '</div>'; }
+  }
+}
+function renderInstalledPlugins(list){
+  const el = $("pluginInstalled");
+  if(!list.length){ el.innerHTML = '<div style="color:var(--muted);font-size:14px">暂无已安装插件</div>'; return; }
+  el.innerHTML = list.map(p =>
+    '<div class="plugin-row"><span>🧩 ' + escHtml(p.name) + '</span>' +
+    '<button class="btn danger-btn sm" onclick="deletePlugin(\'' + p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">删除</button></div>'
+  ).join("");
+}
+function renderAvailablePlugins(plugins, installed){
+  const el = $("pluginAvailable");
+  const names = new Set(installed.map(p => p.name));
+  el.innerHTML = (plugins || []).map(p => {
+    const done = names.has(p.name);
+    const file = (p.files && p.files[0]) || "";
+    return '<div class="plugin-row"><span><b>' + escHtml(p.name) + '</b> ' +
+      '<small style="color:var(--muted)">' + escHtml(p.version || "") + '</small><br>' +
+      '<small style="color:var(--muted)">' + escHtml(p.description || "") + '</small></span>' +
+      (done ? '<span style="color:var(--ok);font-size:14px">已安装</span>'
+        : '<button class="btn sm" onclick="installPlugin(\'' +
+          p.name.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\',\'' +
+          file.replace(/\\/g,"\\\\").replace(/\'/g,"\\\'") + '\')">安装</button>') +
+      '</div>';
+  }).join("") || '<div style="color:var(--muted);font-size:14px">暂无插件</div>';
+}
+function installPlugin(name, file){
+  if(!/^[A-Za-z0-9_-]{1,64}$/.test(name) || !file || file.includes("..")){
+    toast("插件信息非法"); return;
+  }
+  PENDING_PLUGIN = {name: name};
+  toast("正在下载 " + name + "…");
+  try{ bridge().fetchText("pluginfile", PLUGINS_BASE + file); }
+  catch(e){ PENDING_PLUGIN = null; toast("下载失败：" + e); }
+}
+function deletePlugin(name){
+  if(!confirm("删除插件「" + name + "」？")) return;
+  withLoading(()=>{
+    let r;
+    try{ r = JSON.parse(bridge().deletePlugin(name)); }
+    catch(e){ toast("删除失败：" + e); return; }
+    toast(r.ok ? "已删除" : r.msg);
+    if(r.ok) refreshPlugins();
+  });
+}
+function onPluginsFetched(raw){
+  let r;
+  try{ r = JSON.parse(raw); }catch(e){ setPluginListError("解析失败"); return; }
+  if(!r || r.error || r.status !== 200){ setPluginListError((r && (r.error || ("HTTP " + r.status))) || "未知错误"); return; }
+  let j;
+  try{ j = JSON.parse(r.body); }catch(e){ setPluginListError("解析失败"); return; }
+  PLUGINS_CACHE = j.plugins || [];
+  renderAvailablePlugins(PLUGINS_CACHE, currentInstalledForRender());
+}
+function currentInstalledForRender(){
+  try{
+    const r = JSON.parse(bridge().listInstalledPlugins());
+    if(r.ok) return r.plugins || [];
+  }catch(e){}
+  return [];
+}
+function setPluginListError(msg){
+  $("pluginAvailable").innerHTML = '<div style="color:var(--danger);font-size:14px">加载失败：' + escHtml(msg) + '</div>';
+}
+function onPluginFileFetched(raw){
+  const p = PENDING_PLUGIN; PENDING_PLUGIN = null;
+  if(!p) return;
+  let r;
+  try{ r = JSON.parse(raw); }catch(e){ toast("下载失败：解析错误"); return; }
+  if(!r || r.error || r.status !== 200){ toast("下载失败：" + ((r && (r.error || ("HTTP " + r.status))) || "未知错误")); return; }
+  const body = r.body || "";
+  if(!body.trim()){ toast("插件文件为空"); return; }
+  withLoading(()=>{
+    let rr;
+    try{ rr = JSON.parse(bridge().installPluginFile(p.name, body)); }
+    catch(e){ toast("安装失败：" + e); return; }
+    toast(rr.ok ? ("已安装 " + p.name) : ("安装失败：" + rr.msg));
+    if(rr.ok) refreshPlugins();
+  });
+}
+
 function doSave(){
   let rel = $("f_rel").value.trim();
   const title = $("f_title").value.trim();
@@ -658,6 +788,8 @@ function checkUpdate(manual){
   catch(e){ UPD_WAITING = false; loading(false); if(manual) toast("检查失败："+e); }
 }
 function onFetchText(tag, raw){
+  if(tag === "plugins"){ onPluginsFetched(raw); return; }
+  if(tag === "pluginfile"){ onPluginFileFetched(raw); return; }
   if(tag !== "update" || !UPD_WAITING) return;
   UPD_WAITING = false; loading(false);
   const manual = UPD_MANUAL;

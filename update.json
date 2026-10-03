@@ -1,5 +1,5 @@
 {
-  "latest": "0.21.5",
-  "notes": "v0.21.5\n- APK 瘦身第二刀：砍掉 armeabi-v7a（32 位），只留 arm64",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.21.5/mssg.apk"
+  "latest": "0.22.0",
+  "notes": "v0.22.0\n- 扩展商店：抽屉「🧩 扩展商店」，从 mssg-plugins 仓库一键安装/删除 shortcode 插件，插件不进 APK",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.22.0/mssg.apk"
 }
