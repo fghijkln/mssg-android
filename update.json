@@ -1,5 +1,1 @@
-{
-  "latest": "0.27.0",
-  "notes": "v0.27.0 中英双语\n- App 全界面中英切换（抽屉 🌐 按钮）\n- 主题模板跟随站点语言\n- 插件开发教程（中英）、英文 README",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.27.0/app-release.apk"
-}
+{"apk":"https://github.com/fghijkln/mssg-android/releases/download/v0.27.1/app-release.apk","latest":"0.27.1","notes":"v0.27.1 WebWeave 更名 + 全双语补完\n- App 正式更名 WebWeave\n- 主题名中英双语（主题药丸/下拉跟随语言）\n- 插件商店全双语（按钮/确认框/提示/插件描述）"}
