@@ -741,39 +741,84 @@ function openAi(){
   $("aiSheet").classList.add("show");
 }
 function closeAi(){ $("aiSheet").classList.remove("show"); }
+/* ============ PluginHost：通用插件宿主 ============
+ * APK 不认识插件类型，只认 manifest.contributions 声明。
+ * 扩展点（extension point）是稳定 API，插件声明贡献到哪个点，
+ * Host 就渲染到哪里。新增插件类型无需改 APK。
+ * 兼容老 manifest：type=ai + 顶层 actions 自动归一化为 ai.actions。
+ */
+const PluginHost = {
+  plugins: [],  // [{name, description, version, contributions}]
+  normalize(manifest){
+    const c = Object.assign({}, manifest.contributions || {});
+    if(manifest.type === "ai" && manifest.actions && !c["ai.actions"]){
+      c["ai.actions"] = manifest.actions;
+    }
+    return c;
+  },
+  load(){
+    this.plugins = [];
+    try{
+      const r = JSON.parse(bridge().listPlugins());
+      if(r.ok && r.plugins){
+        this.plugins = r.plugins.map(p => {
+          let m = {};
+          try{ m = JSON.parse(p.manifest); }catch(e){}
+          return {
+            name: p.name,
+            description: p.description || m.description || "",
+            version: p.version || m.version || "",
+            contributions: this.normalize(m),
+          };
+        });
+      }
+    }catch(e){}
+    // 兼容只有老接口的极端情况
+    if(!this.plugins.length){
+      try{
+        const r = JSON.parse(bridge().listAiPlugins());
+        if(r.ok && r.plugins){
+          this.plugins = r.plugins.map(p => ({name: p.name, description: "", version: "", contributions: {}}));
+        }
+      }catch(e){}
+    }
+  },
+  /* 取某扩展点的所有贡献：[{plugin, pluginDesc, items}] */
+  contributions(point){
+    const out = [];
+    for(const p of this.plugins){
+      const items = p.contributions[point];
+      if(items && items.length) out.push({plugin: p.name, pluginDesc: p.description, items: items});
+    }
+    return out;
+  },
+};
 let AI_PLUGINS = [];
 function loadAiActions(){
   AI_ACTIONS = DEFAULT_AI_ACTIONS;
-  AI_PLUGINS = [];
-  try{
-    const r = JSON.parse(bridge().listAiPlugins());
-    if(r.ok && r.plugins && r.plugins.length) AI_PLUGINS = r.plugins;
-  }catch(e){}
+  PluginHost.load();
+  const contribs = PluginHost.contributions("ai.actions");
+  AI_PLUGINS = contribs;
   const sel = $("aiPluginSel");
-  if(AI_PLUGINS.length > 1){
+  if(contribs.length > 1){
     sel.style.display = "";
-    sel.innerHTML = '<option value="">内置默认</option>' + AI_PLUGINS.map(p =>
-      '<option value="' + escHtml(p.name) + '">' + escHtml(p.description || p.name) + '</option>').join("");
+    sel.innerHTML = '<option value="">内置默认</option>' + contribs.map(c =>
+      '<option value="' + escHtml(c.plugin) + '">' +
+      escHtml(c.pluginDesc || c.plugin) + '（' + c.items.length + ' 个动作）</option>').join("");
     sel.value = "";
   }else{
     sel.style.display = "none";
-    if(AI_PLUGINS.length === 1) loadAiPluginActions(AI_PLUGINS[0].name);
+    if(contribs.length === 1) AI_ACTIONS = contribs[0].items;
   }
   renderAiActions();
 }
 function switchAiPlugin(name){
   if(!name){ AI_ACTIONS = DEFAULT_AI_ACTIONS; }
-  else loadAiPluginActions(name);
+  else{
+    const c = PluginHost.contributions("ai.actions").find(x => x.plugin === name);
+    if(c) AI_ACTIONS = c.items;
+  }
   renderAiActions();
-}
-function loadAiPluginActions(name){
-  try{
-    const p = JSON.parse(bridge().getAiPlugin(name));
-    if(p.ok){
-      const j = JSON.parse(p.content);
-      if(j.actions && j.actions.length) AI_ACTIONS = j.actions;
-    }
-  }catch(e){}
 }
 function renderAiActions(){
   $("aiActions").innerHTML = AI_ACTIONS.map(a =>

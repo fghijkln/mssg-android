@@ -1,5 +1,5 @@
 {
-  "latest": "0.25.6",
-  "notes": "v0.25.6\n- AI 助手支持多插件切换（写作/代码）\n- 新插件 ai-coder：手机写代码帮手",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.25.6/app-release.apk"
+  "latest": "0.26.0",
+  "notes": "v0.26.0 插件宿主大改\n- APK 不再认识插件类型，只认 manifest 的 contributions 声明\n- 新增通用 listPlugins 接口；AI 面板经 PluginHost 渲染\n- 老插件（ai-writer/ai-coder）无需改动，自动兼容\n- 以后新插件只要声明 contributions，装上即用，不用再改 APK",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.26.0/app-release.apk"
 }

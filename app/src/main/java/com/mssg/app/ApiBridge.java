@@ -419,6 +419,46 @@ public class ApiBridge {
     }
 
     @JavascriptInterface
+    /**
+     * 通用插件宿主接口：返回所有已安装插件的 manifest。
+     * APK 不解析插件类型，只透传 manifest；具体渲染由 JS PluginHost 按
+     * contributions 声明完成。新增插件类型无需改 APK。
+     */
+    @JavascriptInterface
+    public String listPlugins() {
+        try {
+            JSONArray arr = new JSONArray();
+            java.io.File dir = aiPluginDir();
+            if (dir.isDirectory()) {
+                java.io.File[] files = dir.listFiles((d, n) -> n.endsWith(".json"));
+                if (files != null) {
+                    for (java.io.File f : files) {
+                        try {
+                            String c = new String(
+                                    java.nio.file.Files.readAllBytes(f.toPath()),
+                                    java.nio.charset.StandardCharsets.UTF_8);
+                            JSONObject j = new JSONObject(c);
+                            JSONObject o = new JSONObject();
+                            o.put("name", j.optString("name",
+                                    f.getName().replace(".json", "")));
+                            o.put("description", j.optString("description", ""));
+                            o.put("version", j.optString("version", ""));
+                            o.put("manifest", c);
+                            arr.put(o);
+                        } catch (Exception ignored) {}
+                    }
+                }
+            }
+            JSONObject r = new JSONObject();
+            r.put("ok", true);
+            r.put("plugins", arr);
+            return r.toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
     public String listAiPlugins() {
         try {
             JSONArray arr = new JSONArray();
