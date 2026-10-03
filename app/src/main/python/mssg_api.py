@@ -571,16 +571,13 @@ def ai_create_site(parent_dir: str, spec_text: str) -> str:
 
 def ai_promote_site(parent_dir: str) -> str:
     """把 site-ai/ 设为当前站点（覆盖 site/）。调用前 JS 已让用户确认。"""
-    import shutil as _shutil
-
     try:
         src = Path(parent_dir) / "site-ai"
         dst = Path(parent_dir) / "site"
         if not src.is_dir() or not (src / "mssg.toml").is_file():
             return _fail("AI 站点不存在，请先生成")
-        if dst.exists():
-            _shutil.rmtree(dst)
-        _shutil.copytree(src, dst)
+        # 只拷数据不保留权限（copytree 的 copystat 在手机上 Permission denied）
+        _copy_data_only(src, dst)
         return _ok()
     except Exception:
         return _fail(traceback.format_exc(limit=3))
