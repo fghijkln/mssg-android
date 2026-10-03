@@ -320,9 +320,16 @@ public class ApiBridge {
         }).start();
     }
 
+    private Toast lastToast;
+
     private void toast(final String msg) {
-        activity.runOnUiThread(() ->
-                Toast.makeText(activity, msg, Toast.LENGTH_LONG).show());
+        activity.runOnUiThread(() -> {
+            try {
+                if (lastToast != null) lastToast.cancel();
+            } catch (Exception ignored) {}
+            lastToast = Toast.makeText(activity, msg, Toast.LENGTH_LONG);
+            lastToast.show();
+        });
     }
 
     /**

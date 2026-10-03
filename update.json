@@ -1,5 +1,5 @@
 {
-  "latest": "0.21.0",
-  "notes": "v0.21.0\n- 从备份恢复：抽屉「📥 从备份恢复」，选备份 ZIP→校验→确认→覆盖恢复（保留 Cloudflare 账号），换机不丢数据",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.21.0/mssg.apk"
+  "latest": "0.21.1",
+  "notes": "v0.21.1\n- 修从备份恢复失败：复制文件时不再保留权限时间（部分手机上 chmod 直接报权限不足），只拷数据\n- 修更新提示残留：提示改为单例，新的直接顶掉旧的，安装界面弹出后不再有过期进度提示",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.21.1/mssg.apk"
 }

@@ -297,6 +297,32 @@ def import_bundle_image(site_dir: str, tmp_path: str, rel: str) -> str:
 _RESTORE_ITEMS = ("mssg.toml", "content", "static", "data", "templates")
 
 
+def _copy_data_only(src: "Path", dst: "Path") -> None:
+    """递归复制文件/目录，只拷数据不保留权限时间。
+
+    shutil.copy2/copytree 会调 copystat→chmod，在部分 Android
+    文件系统上直接 Permission denied，这里完全避开。
+    """
+    import shutil as _shutil
+
+    if src.is_dir() and not src.is_symlink():
+        if dst.is_dir() and not dst.is_symlink():
+            _shutil.rmtree(dst)
+        elif dst.exists() or dst.is_symlink():
+            dst.unlink()
+        dst.mkdir(parents=True, exist_ok=True)
+        for item in src.iterdir():
+            _copy_data_only(item, dst / item.name)
+    else:
+        if dst.is_dir() and not dst.is_symlink():
+            _shutil.rmtree(dst)
+        elif dst.exists() or dst.is_symlink():
+            dst.unlink()
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        with open(src, "rb") as fsrc, open(dst, "wb") as fdst:
+            _shutil.copyfileobj(fsrc, fdst, 1024 * 64)
+
+
 def _check_backup_zip(zip_path: str) -> "Path":
     """校验备份 ZIP，返回其 Path；无效则抛 ValueError。"""
     import zipfile as _zf
@@ -354,15 +380,7 @@ def restore_backup(site_dir: str, zip_path: str) -> str:
                 src = tmp / name
                 if not src.exists():
                     continue
-                dst = site / name
-                if dst.is_dir() and not dst.is_symlink():
-                    _shutil.rmtree(dst)
-                elif dst.exists() or dst.is_symlink():
-                    dst.unlink()
-                if src.is_dir():
-                    _shutil.copytree(src, dst)
-                else:
-                    _shutil.copy2(src, dst)
+                _copy_data_only(src, site / name)
             # 构建产物清空，下次构建全新生成
             pub = site / "public"
             if pub.is_dir():
