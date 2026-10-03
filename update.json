@@ -1,5 +1,5 @@
 {
-  "latest": "0.25.3",
-  "notes": "v0.25.3\n- AI 模型选择器：弹窗列表 + 搜索 + 一键拉取",
-  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.25.3/app-release.apk"
+  "latest": "0.25.4",
+  "notes": "v0.25.4\n- 项目/文件列表改版：紧凑卡片、🗑️ 删除、文件名显示",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.25.4/app-release.apk"
 }
