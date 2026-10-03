@@ -281,25 +281,24 @@ public class ApiBridge {
     }
 
     /**
-     * 异步检查更新：网络在普通后台线程跑，不占 JS 桥线程；
-     * 结果通过 onUpdateResult(jsonStr) 回调到页面。
+     * 通用异步文本抓取：网络在普通后台线程跑，不占 JS 桥线程；
+     * 结果通过 onFetchText(tag, jsonStr) 回调到页面。
+     * jsonStr 形如 {"status":200,"body":"..."} 或 {"error":"..."}。
      */
     @JavascriptInterface
-    public void checkAppUpdate() {
+    public void fetchText(String tag, String url) {
         new Thread(() -> {
             String raw;
             try {
-                raw = cfFetchSync("GET",
-                        "https://api.github.com/fghijkln/mssg-android/releases/latest",
-                        "{\"Accept\":\"application/vnd.github+json\"}", "", 15);
+                raw = cfFetchSync("GET", url, "{\"Accept\":\"*/*\"}", "", 15);
             } catch (Exception e) {
                 raw = "{\"error\":\"" + e.toString().replace("\"", "'") + "\"}";
             }
             final String result = raw;
             activity.runOnUiThread(() -> {
                 try {
-                    wv.evaluateJavascript(
-                            "onUpdateResult(" + JSONObject.quote(result) + ")", null);
+                    wv.evaluateJavascript("onFetchText(" + JSONObject.quote(tag) + ","
+                            + JSONObject.quote(result) + ")", null);
                 } catch (Exception ignored) {}
             });
         }).start();

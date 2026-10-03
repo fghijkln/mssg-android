@@ -492,18 +492,20 @@ function cmpVer(a, b){
   return 0;
 }
 let UPD_MANUAL = false, UPD_WAITING = false;
+const UPDATE_JSON_URL =
+  "https://raw.githubusercontent.com/fghijkln/mssg-android/master/update.json";
 function checkUpdate(manual){
-  // 异步：桥方法立即返回，不卡 JS 桥线程；结果走 onUpdateResult 回调
+  // 数据源：仓库内 update.json（GitHub API 对匿名请求 /releases/* 经常 404，不可靠）
   UPD_MANUAL = manual; UPD_WAITING = true;
   loading(true);
-  setTimeout(()=>{ // 30 秒还没回来就当失败，避免遮罩卡死
+  setTimeout(()=>{
     if(UPD_WAITING){ UPD_WAITING = false; loading(false); if(UPD_MANUAL) toast("检查超时"); }
   }, 30000);
-  try{ bridge().checkAppUpdate(); }
+  try{ bridge().fetchText("update", UPDATE_JSON_URL); }
   catch(e){ UPD_WAITING = false; loading(false); if(manual) toast("检查失败："+e); }
 }
-function onUpdateResult(raw){
-  if(!UPD_WAITING) return;
+function onFetchText(tag, raw){
+  if(tag !== "update" || !UPD_WAITING) return;
   UPD_WAITING = false; loading(false);
   const manual = UPD_MANUAL;
   let r;
@@ -512,23 +514,22 @@ function onUpdateResult(raw){
     if(manual) toast("检查失败：" + ((r && (r.error || ("HTTP " + r.status))) || "未知错误"));
     return;
   }
-  let rel;
-  try{ rel = JSON.parse(r.body); }catch(e){ if(manual) toast("解析失败"); return; }
-  const latest = (rel.tag_name || "").replace(/^v/, "");
+  let j;
+  try{ j = JSON.parse(r.body); }catch(e){ if(manual) toast("解析失败"); return; }
+  const latest = String(j.latest || "").replace(/^v/, "");
   if(!latest){ if(manual) toast("没取到版本信息"); return; }
   let cur = "";
   try{ cur = bridge().getAppVersion(); }catch(e){}
   if(cmpVer(latest, cur) > 0){
-    const apk = (rel.assets || []).find(a=>a.name && a.name.endsWith(".apk"));
-    UPD_URL = apk ? apk.browser_download_url : rel.html_url;
+    UPD_URL = j.apk ||
+      ("https://github.com/fghijkln/mssg-android/releases/tag/v" + latest);
     $("updVer").textContent = "v" + latest;
-    $("updBody").textContent = (rel.body || "（无更新说明）").slice(0, 1200);
+    $("updBody").textContent = String(j.notes || "（无更新说明）").slice(0, 1200);
     $("updateSheet").classList.add("show");
   }else if(manual){
     toast("已是最新版本（v" + cur + "）");
   }
 }
-function closeUpdate(){ $("updateSheet").classList.remove("show"); }
 function doUpdateDownload(){ if(UPD_URL) bridge().openUrl(UPD_URL); }
 function closeExport(){ $("exportSheet").classList.remove("show"); }
 function doBackupSite(){

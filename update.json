@@ -1,0 +1,5 @@
+{
+  "latest": "0.15.3",
+  "notes": "v0.15.3\n- 检查更新换数据源：GitHub API 对匿名请求 /releases/* 一律 404（连 facebook/react 都一样），改走仓库内 update.json，可靠\n- 更新检查逻辑不变：启动自动静默检查，抽屉可手动检查",
+  "apk": "https://github.com/fghijkln/mssg-android/releases/download/v0.15.3/app-debug.apk"
+}
