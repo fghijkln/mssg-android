@@ -424,7 +424,7 @@ zh: {
   "drawer.dark": "🌙 深色模式",
   "drawer.plugins": "🧩 扩展商店",
   "drawer.check_update": "🔄 检查更新",
-  "drawer.language": "🌐 语言 / Language",
+  "drawer.language": "语言 / Language",
   "top.preview": "预览",
   "top.build": "构建",
   "home.theme": "🎨 主题",
@@ -561,7 +561,7 @@ en: {
   "drawer.dark": "🌙 Dark Mode",
   "drawer.plugins": "🧩 Plugin Store",
   "drawer.check_update": "🔄 Check for Updates",
-  "drawer.language": "🌐 Language / 语言",
+  "drawer.language": "Language / 语言",
   "top.preview": "Preview",
   "top.build": "Build",
   "home.theme": "🎨 Themes",
@@ -1934,6 +1934,9 @@ function clearCss(){
 }
 
 document.addEventListener("DOMContentLoaded", refresh);
+// 启动时按保存的语言渲染一次静态文本：否则重进 App 永远显示中文，
+// 而且第一次点语言切换会从"真实已是 en"切到 zh，看起来像要点两次才生效。
+try{ applyI18n(); }catch(e){}
 </script>
 </body>
 </html>
