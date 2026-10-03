@@ -65,6 +65,7 @@ public class ApiBridge {
     private String dlUrl;
     private long dlReceived, dlTotal;
     private int dlLastPct;
+    private volatile boolean dlInstallLaunched = false;
     private boolean dlActive;
 
     public ApiBridge(Activity activity, WebView wv, String siteDir) {
@@ -511,9 +512,9 @@ public class ApiBridge {
     @JavascriptInterface
     public String getAiPlugin(String name) {
         try {
-            if (!validAiName(name)) return fail(new Exception("非法插件名"));
+            if (!validAiName(name)) return fail(new Exception(tr("非法插件名", "Invalid plugin name")));
             java.io.File f = new java.io.File(aiPluginDir(), name + ".json");
-            if (!f.isFile()) return fail(new Exception("插件不存在"));
+            if (!f.isFile()) return fail(new Exception(tr("插件不存在", "Plugin not found")));
             String c = new String(java.nio.file.Files.readAllBytes(f.toPath()),
                     java.nio.charset.StandardCharsets.UTF_8);
             new JSONObject(c); // 校验
@@ -529,9 +530,9 @@ public class ApiBridge {
     @JavascriptInterface
     public String installAiPlugin(String name, String content) {
         try {
-            if (!validAiName(name)) return fail(new Exception("非法插件名"));
+            if (!validAiName(name)) return fail(new Exception(tr("非法插件名", "Invalid plugin name")));
             if (content == null || content.trim().isEmpty())
-                return fail(new Exception("插件文件为空"));
+                return fail(new Exception(tr("插件文件为空", "Plugin file is empty")));
             new JSONObject(content); // 校验
             java.io.File dir = aiPluginDir();
             dir.mkdirs();
@@ -547,7 +548,7 @@ public class ApiBridge {
     @JavascriptInterface
     public String deleteAiPlugin(String name) {
         try {
-            if (!validAiName(name)) return fail(new Exception("非法插件名"));
+            if (!validAiName(name)) return fail(new Exception(tr("非法插件名", "Invalid plugin name")));
             java.io.File f = new java.io.File(aiPluginDir(), name + ".json");
             if (f.isFile()) f.delete();
             return "{\"ok\":true}";
@@ -701,12 +702,13 @@ public class ApiBridge {
             }
             dlUri = activity.getContentResolver().insert(
                     MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
-            if (dlUri == null) throw new Exception("无法写入下载目录");
+            if (dlUri == null) throw new Exception(tr("无法写入下载目录", "Cannot write to download dir"));
             dlOut = activity.getContentResolver().openOutputStream(dlUri);
-            if (dlOut == null) throw new Exception("无法打开输出流");
+            if (dlOut == null) throw new Exception(tr("无法打开输出流", "Cannot open output stream"));
             dlReceived = 0;
             dlTotal = -1;
             dlLastPct = -1;
+            dlInstallLaunched = false;
             toast(tr("开始下载更新…", "Starting download…"));
             String js = "(async()=>{try{"
                     + "const r=await fetch(" + JSONObject.quote(url) + ");"
@@ -725,7 +727,7 @@ public class ApiBridge {
                     + "})();";
             wv.evaluateJavascript(js, null);
         } catch (Exception e) {
-            finishDownload("下载失败：" + e.getMessage(), true);
+            finishDownload(tr("下载失败：", "Download failed: ") + e.getMessage(), true);
         }
     }
 
@@ -747,7 +749,7 @@ public class ApiBridge {
                     return;
                 }
             }
-            if (dlTotal > 0) {
+            if (dlTotal > 0 && !dlInstallLaunched) {
                 int pct = (int) (dlReceived * 100 / dlTotal);
                 if (pct >= dlLastPct + 25) {
                     dlLastPct = pct;
@@ -755,7 +757,7 @@ public class ApiBridge {
                 }
             }
         } catch (Exception e) {
-            finishDownload("写入失败：" + e.getMessage(), true);
+            finishDownload(tr("写入失败：", "Write failed: ") + e.getMessage(), true);
         }
     }
 
@@ -780,7 +782,7 @@ public class ApiBridge {
         final String error = err;
         activity.runOnUiThread(() -> {
             if (error != null) {
-                toast(error + (fallbackBrowser ? "，改用浏览器下载" : ""));
+                toast(error + (fallbackBrowser ? tr("，改用浏览器下载", ", opening in browser instead") : ""));
                 if (fallbackBrowser && dlUrl != null) {
                     try {
                         openUrl(dlUrl);
@@ -800,6 +802,8 @@ public class ApiBridge {
                 install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                         | Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 activity.startActivity(install);
+                // 安装界面已调起：后面再到的分片进度回调不再刷 toast
+                dlInstallLaunched = true;
             } catch (Exception e) {
                 toast(tr("调起安装失败：", "Failed to launch installer: ") + e.getMessage());
             }
@@ -813,7 +817,7 @@ public class ApiBridge {
     @JavascriptInterface
     public void pickImage(String rel) {
         if (rel == null || rel.trim().isEmpty()) {
-            toast("请先填写文件名，再插入图片");
+            toast(tr("请先填写文件名，再插入图片", "Fill in the filename first, then insert the image"));
             return;
         }
         pendingImageRel = rel.trim();
@@ -823,7 +827,7 @@ public class ApiBridge {
         try {
             activity.startActivityForResult(intent, REQ_PICK_IMAGE);
         } catch (Exception e) {
-            toast("打不开相册：" + e.getMessage());
+            toast(tr("打不开相册：", "Can't open album: ") + e.getMessage());
         }
     }
 
@@ -863,10 +867,10 @@ public class ApiBridge {
                         catch (Exception ignored) {}
                     });
                 } else {
-                    toast(o.optString("msg", "图片处理失败"));
+                    toast(o.optString("msg", tr("图片处理失败", "Image processing failed")));
                 }
             } catch (Exception e) {
-                toast("图片处理失败：" + e.getMessage());
+                toast(tr("图片处理失败：", "Image processing failed: ") + e.getMessage());
             } finally {
                 if (tmp != null) tmp.delete();
             }
@@ -883,7 +887,7 @@ public class ApiBridge {
         try {
             activity.startActivityForResult(intent, REQ_PICK_BACKUP);
         } catch (Exception e) {
-            toast("打不开文件选择：" + e.getMessage());
+            toast(tr("打不开文件选择：", "Can't open file picker: ") + e.getMessage());
         }
     }
 
@@ -918,11 +922,11 @@ public class ApiBridge {
                     });
                 } else {
                     tmp.delete();
-                    toast(o.optString("msg", "备份校验失败"));
+                    toast(o.optString("msg", tr("备份校验失败", "Backup verification failed")));
                 }
             } catch (Exception e) {
                 if (tmp != null) tmp.delete();
-                toast("读取备份失败：" + e.getMessage());
+                toast(tr("读取备份失败：", "Failed to read backup: ") + e.getMessage());
             }
         }).start();
         return true;
@@ -1002,7 +1006,7 @@ public class ApiBridge {
     public String saveToDownload(String srcPath, String fileName, String mimeType) {
         try {
             File src = new File(srcPath);
-            if (!src.exists()) return "{\"ok\":false,\"msg\":\"文件不存在\"}";
+            if (!src.exists()) return "{\"ok\":false,\"msg\":\"" + tr("文件不存在", "File not found") + "\"}";
             String where;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentValues v = new ContentValues();
@@ -1012,7 +1016,7 @@ public class ApiBridge {
                         Environment.DIRECTORY_DOWNLOADS);
                 Uri uri = activity.getContentResolver().insert(
                         MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
-                if (uri == null) return "{\"ok\":false,\"msg\":\"无法写入下载目录\"}";
+                if (uri == null) return "{\"ok\":false,\"msg\":\"" + tr("无法写入下载目录", "Cannot write to download dir") + "\"}";
                 try (OutputStream out = activity.getContentResolver()
                         .openOutputStream(uri);
                      InputStream in = new FileInputStream(src)) {
@@ -1020,7 +1024,7 @@ public class ApiBridge {
                     int n;
                     while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
                 }
-                where = "下载/" + fileName;
+                where = tr("下载/", "Downloads/") + fileName;
             } else {
                 File dir = activity.getExternalFilesDir(
                         Environment.DIRECTORY_DOWNLOADS);
@@ -1056,7 +1060,7 @@ public class ApiBridge {
                             Environment.DIRECTORY_DOWNLOADS);
                     uri = activity.getContentResolver().insert(
                             MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
-                    if (uri == null) throw new Exception("无法写入下载目录");
+                    if (uri == null) throw new Exception(tr("无法写入下载目录", "Cannot write to download dir"));
                     try (OutputStream out = activity.getContentResolver()
                             .openOutputStream(uri);
                          InputStream in = new FileInputStream(srcPath)) {
@@ -1079,9 +1083,9 @@ public class ApiBridge {
                 intent.setType(mimeType);
                 intent.putExtra(Intent.EXTRA_STREAM, uri);
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                activity.startActivity(Intent.createChooser(intent, "分享文件"));
+                activity.startActivity(Intent.createChooser(intent, tr("分享文件", "Share file")));
             } catch (Exception e) {
-                Toast.makeText(activity, "分享失败：" + e,
+                Toast.makeText(activity, tr("分享失败：", "Share failed: ") + e,
                         Toast.LENGTH_LONG).show();
             }
         });

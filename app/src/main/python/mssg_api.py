@@ -35,6 +35,11 @@ def _fail(zh, en=None):
     return json.dumps({"ok": False, "msg": str(msg)}, ensure_ascii=False)
 
 
+def _tr(zh, en):
+    """跟随 App 界面语言的双语字符串（用于异常消息与默认值）。"""
+    return zh if _APP_LANG == "zh" else en
+
+
 def list_pages(site_dir: str) -> str:
     try:
         return _ok(pages=_app(site_dir)._list_pages())
@@ -161,8 +166,8 @@ def set_theme(site_dir: str, theme: str) -> str:
         cleared = ""
         if custom.is_file():
             custom.unlink()
-            cleared = "（已清除自定义 CSS）"
-        return _ok(msg="已切换为「%s」%s，下次构建生效" % (theme, cleared), theme=theme)
+            cleared = _tr("（已清除自定义 CSS）", " (custom CSS cleared)")
+        return _ok(msg=_tr("已切换为「%s」%s，下次构建生效", "Switched to \"%s\"%s, takes effect on next build") % (theme, cleared), theme=theme)
     except Exception:
         return _fail(traceback.format_exc(limit=3))
 
@@ -344,13 +349,13 @@ def _check_backup_zip(zip_path: str) -> "Path":
 
     zp = Path(zip_path)
     if not zp.is_file():
-        raise ValueError("找不到备份文件")
+        raise ValueError(_tr("找不到备份文件", "Backup file not found"))
     if not _zf.is_zipfile(str(zp)):
-        raise ValueError("不是有效的 ZIP 文件")
+        raise ValueError(_tr("不是有效的 ZIP 文件", "Not a valid ZIP file"))
     with _zf.ZipFile(str(zp)) as zf:
         names = zf.namelist()
     if "mssg.toml" not in names:
-        raise ValueError("该 ZIP 不是 WebWeave 站点备份（缺少 mssg.toml）")
+        raise ValueError(_tr("该 ZIP 不是 WebWeave 站点备份（缺少 mssg.toml）", "Not a WebWeave site backup (missing mssg.toml)"))
     return zp
 
 
@@ -476,7 +481,7 @@ def ai_create_site(parent_dir: str, spec_text: str) -> str:
     import shutil as _shutil
 
     try:
-        site = {"title": "我的网站", "description": "", "theme": "minimal"}
+        site = {"title": _tr("我的网站", "My Website"), "description": "", "theme": "minimal"}
         pages = []
         cur = None
         body_lines: list = []
@@ -535,7 +540,7 @@ def ai_create_site(parent_dir: str, spec_text: str) -> str:
         theme = site.get("theme", "minimal").strip()
         if theme not in ("minimal", "company"):
             theme = "minimal"
-        title = site.get("title", "").strip() or "我的网站"
+        title = site.get("title", "").strip() or _tr("我的网站", "My Website")
         desc = site.get("description", "").strip()
 
         def _q(s: str) -> str:
@@ -582,7 +587,7 @@ def ai_create_site(parent_dir: str, spec_text: str) -> str:
         import re as _re2
         pname = _re2.sub(r"[^A-Za-z0-9_\-\u4e00-\u9fa5]", "", title).strip()[:30]
         if not pname:
-            pname = "AI站点"
+            pname = _tr("AI站点", "AI site")
         pdir = _projects_dir(parent_dir)
         base, i = pname, 2
         while (pdir / pname).exists():
@@ -866,7 +871,7 @@ def cf_connect(site_dir: str, token: str) -> str:
             return _fail("Token 不能为空", "Token is required")
         info = cf.verify_token(token)
         if info.get("status") != "active":
-            return _fail("Token 状态异常：%s" % info.get("status"))
+            return _fail("Token 状态异常：%s" % info.get("status"), "Token error: %s" % info.get("status"))
         accounts = cf.list_accounts(token)
         c = _cf_load(site_dir)
         c.update(token=token, account_id="", account_name="")
@@ -890,17 +895,17 @@ def cf_set_account(site_dir: str, account_id: str) -> str:
 
         c = _cf_load(site_dir)
         if not c.get("token"):
-            return _fail("请先粘贴 API Token 并连接")
+            return _fail("请先粘贴 API Token 并连接", "Paste your API token and connect first")
         account_id = (account_id or "").strip()
         if not account_id:
-            return _fail("Account ID 不能为空")
+            return _fail("Account ID 不能为空", "Account ID is required")
         # 验证 Token 对该账号可用：列出 Pages 项目
         cf.list_projects(c["token"], account_id)
         c.update(account_id=account_id)
         _cf_save(site_dir, c)
         return _ok(account_id=account_id)
     except Exception as e:
-        return _fail("Account ID 无效或 Token 无权访问：%s" % e)
+        return _fail("Account ID 无效或 Token 无权访问：%s" % e, "Invalid Account ID or token has no access: %s" % e)
 
 
 def cf_set_project(site_dir: str, name: str) -> str:
@@ -910,7 +915,7 @@ def cf_set_project(site_dir: str, name: str) -> str:
 
         c = _cf_load(site_dir)
         if not c.get("token"):
-            return _fail("请先连接 Cloudflare")
+            return _fail("请先连接 Cloudflare", "Connect Cloudflare first")
         name = cf.sanitize_project_name(name)
         proj, created = cf.get_or_create_project(
             c["token"], c["account_id"], name
@@ -930,7 +935,7 @@ def cf_projects(site_dir: str) -> str:
 
         c = _cf_load(site_dir)
         if not c.get("token") or not c.get("account_id"):
-            return _fail("请先连接 Cloudflare")
+            return _fail("请先连接 Cloudflare", "Connect Cloudflare first")
         projs = cf.list_projects(c["token"], c["account_id"])
         out = []
         for pr in projs:
@@ -962,9 +967,9 @@ def cf_deploy(site_dir: str) -> str:
 
         c = _cf_load(site_dir)
         if not c.get("token"):
-            return _fail("请先连接 Cloudflare")
+            return _fail("请先连接 Cloudflare", "Connect Cloudflare first")
         if not c.get("project"):
-            return _fail("请先设置 Pages 项目")
+            return _fail("请先设置 Pages 项目", "Set a Pages project first")
         app = _app(site_dir)
         app._rebuild()
         public = _output_dir(site_dir)
@@ -984,7 +989,7 @@ def cf_disconnect(site_dir: str) -> str:
             p.unlink()
         return _ok()
     except Exception as e:
-        return _fail("断开失败：%s" % e)
+        return _fail("断开失败：%s" % e, "Disconnect failed: %s" % e)
 
 
 # ---------- WebView 网络通道（Cloudflare 备用传输） ----------
@@ -1016,4 +1021,4 @@ def cf_enable_webview_transport(bridge):
         cf.set_transport(_wv_fetch)
         return _ok()
     except Exception as e:
-        return _fail("注册 WebView 通道失败：%s" % e)
+        return _fail("注册 WebView 通道失败：%s" % e, "Failed to register WebView channel: %s" % e)
