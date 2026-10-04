@@ -1,0 +1,1 @@
+v0.27.7: Smaller and lighter — ApiBridge slimmed down, Python runtime lazily loaded (about 9MB less memory on first use), WebView lifecycle managed to prevent leaks; removed unused cleartext traffic permission.

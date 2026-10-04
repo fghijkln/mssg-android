@@ -12,7 +12,7 @@ android {
         // 版本号手写在这里（发版时同步改）；CI 会校验 versionName 与 git tag 一致，
         // 不一致则构建失败。F-Droid 直接用这里的值构建。
         versionCode 98
-        versionName "0.27.7-debug"
+        versionName "0.27.7"
 
         ndk {
             // 只留 arm64；x86_64（模拟器）/armeabi-v7a（32 位）已砍
