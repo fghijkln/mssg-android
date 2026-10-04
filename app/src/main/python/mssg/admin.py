@@ -7,13 +7,52 @@
 from __future__ import annotations
 
 import html
+import tomllib
 import traceback
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .frontmatter import split as _split_fm
 from .yaml_subset import dumps as _yaml_dumps
-from .site import Site
+
+
+def _load_cfg(root):
+    """轻量读配置：只取 build/i18n 两节，默认值与 Site._load_config 一致。
+
+    免去导入 site 模块（会拖入 markdown/jinja2），供文件类轻操作使用。
+    """
+    cfg = {
+        "build": {
+            "content_dir": "content",
+            "template_dir": "templates",
+            "static_dir": "static",
+            "output_dir": "public",
+            "drafts": False,
+        },
+        "i18n": {"default": "zh", "langs": []},
+    }
+    path = Path(root) / "mssg.toml"
+    if path.exists():
+        with open(path, "rb") as f:
+            user = tomllib.load(f)
+        for section in ("build", "i18n"):
+            cfg[section].update(user.get(section, {}))
+    return cfg
+
+
+def _split_lang(cfg, rel):
+    """与 Site._split_lang 同语义（见 site.py），免 Site 导入。"""
+    i18n = cfg.get("i18n", {})
+    default = i18n.get("default", "zh") or "zh"
+    langs = [l for l in (i18n.get("langs") or []) if l]
+    if default not in langs:
+        langs = [default] + langs
+    if rel.endswith(".md"):
+        stem = rel[:-3]
+        for lang in langs:
+            if lang != default and stem.endswith("." + lang):
+                return lang, stem[: -(len(lang) + 1)] + ".md"
+    return default, rel
 
 CSS = """
 body{font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
@@ -52,9 +91,19 @@ def _esc(s) -> str:
 class AdminApp:
     def __init__(self, root: str | Path):
         self.root = Path(root)
-        self.site = Site(self.root)
-        b = self.site.cfg["build"]
+        self.cfg = _load_cfg(self.root)
+        b = self.cfg["build"]
         self.content_dir = self.root / b.get("content_dir", "content")
+        self._site = None
+
+    @property
+    def site(self):
+        """Site 懒加载：只有构建类重操作才拖入 markdown/jinja2。"""
+        if self._site is None:
+            from .site import Site
+
+            self._site = Site(self.root)
+        return self._site
 
     # -- 文件操作 ------------------------------------------------------
 
@@ -77,7 +126,7 @@ class AdminApp:
                     meta, _ = _split_fm(md.read_text(encoding="utf-8"))
                 except Exception:
                     meta = {}
-                lang, _ = self.site._split_lang(rel)
+                lang, _ = _split_lang(self.cfg, rel)
                 pages.append(
                     {
                         "rel": rel,
@@ -91,6 +140,8 @@ class AdminApp:
 
     def _rebuild(self) -> str:
         try:
+            from .site import Site
+
             r = Site(self.root).build()
             return "构建成功：%d 个页面" % r.get("pages", 0)
         except Exception:
