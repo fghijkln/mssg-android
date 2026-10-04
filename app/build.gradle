@@ -9,13 +9,10 @@ android {
         applicationId "com.mssg.app"
         minSdk 24
         targetSdk 34
-        // 版本号由 CI 从 git tag 自动传入（-PappVersionName/-PappVersionCode），
-        // 本地构建/F-Droid 构建时回退到下面的手写值。发版时记得同步改这里，
-        // 否则 F-Droid 打出的包版本号是错的。
-        def verCode = (project.findProperty("appVersionCode") ?: "90") as int
-        def verName = project.findProperty("appVersionName") ?: "0.27.6"
-        versionCode verCode
-        versionName verName
+        // 版本号手写在这里（发版时同步改）；CI 会校验 versionName 与 git tag 一致，
+        // 不一致则构建失败。F-Droid 直接用这里的值构建。
+        versionCode 98
+        versionName "0.27.7-debug"
 
         ndk {
             // 只留 arm64；x86_64（模拟器）/armeabi-v7a（32 位）已砍

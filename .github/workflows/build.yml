@@ -119,14 +119,19 @@ jobs:
         run: |
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
-          # 版本号自动化：versionName 取最新 git tag（去 v 前缀），versionCode 取 commit 总数；
-          # 发版时打 tag 再 push，CI 自动对齐，再也不会出现“release 是新 tag、APK 里是旧版本”的问题。
+          # 版本号手写在 app/build.gradle；这里只做校验：tag 的版本必须与
+          # build.gradle 的 versionName 一致，否则直接失败，防止发版时忘改。
           TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.27.0")
           VER=${TAG#v}
-          CODE=$(git rev-list --count HEAD)
-          echo "Building versionName=$VER versionCode=$CODE (tag $TAG)"
-          gradle assembleRelease --console=plain -PappVersionName="$VER" -PappVersionCode="$CODE"
-          gradle assembleDebug --console=plain -PappVersionName="$VER" -PappVersionCode="$CODE"
+          GVER=$(grep -oP 'versionName "\K[^"]+' app/build.gradle)
+          GCODE=$(grep -oP 'versionCode \K[0-9]+' app/build.gradle | head -1)
+          if [ "$VER" != "$GVER" ]; then
+            echo "ERROR: git tag ($VER) != build.gradle versionName ($GVER)，发版前请先同步"
+            exit 1
+          fi
+          echo "Building versionName=$GVER versionCode=$GCODE (tag $TAG, verified match)"
+          gradle assembleRelease --console=plain
+          gradle assembleDebug --console=plain
 
       - name: Upload APK (github flavor)
         uses: actions/upload-artifact@v4
