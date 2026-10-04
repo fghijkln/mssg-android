@@ -134,4 +134,40 @@ public class PreviewActivity extends Activity {
             super.onBackPressed();
         }
     }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (wv != null) wv.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (wv != null) wv.onResume();
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        if (level >= TRIM_MEMORY_MODERATE && wv != null) {
+            wv.clearCache(true);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (wv != null) {
+            wv.stopLoading();
+            wv.loadUrl("about:blank");
+            android.view.ViewParent p = wv.getParent();
+            if (p instanceof android.view.ViewGroup) {
+                ((android.view.ViewGroup) p).removeView(wv);
+            }
+            wv.removeAllViews();
+            wv.destroy();
+            wv = null;
+        }
+        super.onDestroy();
+    }
 }
