@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import html
 import traceback
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -203,117 +202,6 @@ class AdminApp:
         return rel
 
 
-class _Handler(BaseHTTPRequestHandler):
-    app: AdminApp = None  # type: ignore
-    token: str | None = None  # 为 None 时不鉴权
-
-    def log_message(self, *a):
-        pass
-
-    def _authorized(self) -> bool:
-        """token 鉴权：query ?token= 或 Cookie mssg_token。"""
-        if not self.token:
-            return True
-        u = urlparse(self.path)
-        q = parse_qs(u.query)
-        if (q.get("token") or [""])[0] == self.token:
-            return True
-        cookie = self.headers.get("Cookie", "")
-        for part in cookie.split(";"):
-            if part.strip() == "mssg_token=" + self.token:
-                return True
-        return False
-
-    def _deny(self):
-        self._send(
-            "<h1>403</h1><p>需要 token：用启动时打印的完整 URL 访问。</p>", 403
-        )
-
-    def _send(self, html_text: str, code=200, set_cookie: bool = False):
-        data = html_text.encode("utf-8")
-        self.send_response(code)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(data)))
-        if set_cookie and self.token:
-            self.send_header(
-                "Set-Cookie",
-                "mssg_token=%s; Path=/; HttpOnly; SameSite=Lax" % self.token,
-            )
-        self.end_headers()
-        self.wfile.write(data)
-
-    def _redirect(self, to: str):
-        self.send_response(303)
-        self.send_header("Location", to)
-        self.end_headers()
-
-    def _read_form(self) -> dict:
-        n = int(self.headers.get("Content-Length", 0) or 0)
-        raw = self.rfile.read(n).decode("utf-8", "replace") if n else ""
-        return parse_qs(raw, keep_blank_values=True)
-
-    def do_GET(self):
-        if not self._authorized():
-            self._deny()
-            return
-        u = urlparse(self.path)
-        try:
-            if u.path == "/":
-                # query 带 token 进来时种下 cookie，后续免带
-                self._send(self.app.render_index(), set_cookie=True)
-            elif u.path == "/new":
-                inner = self.app._form(rel="post/untitled.md").replace(
-                    '<input type="hidden" name="rel" value="post/untitled.md">',
-                    "<label>文件名（content/ 下相对路径，如 post/hello.md）</label>"
-                    '<input type="text" name="rel" value="post/untitled.md" required>',
-                )
-                page = LAYOUT.format(
-                    css=CSS, msg="", body="<h2>新建文章</h2>" + inner
-                )
-                self._send(page)
-            elif u.path == "/edit":
-                q = parse_qs(u.query)
-                rel = (q.get("f") or [""])[0]
-                path = self.app._safe_path(rel)
-                meta, body = _split_fm(path.read_text(encoding="utf-8"))
-                page = LAYOUT.format(
-                    css=CSS, msg="",
-                    body="<h2>编辑 %s</h2>" % _esc(rel)
-                    + self.app._form(rel=rel, meta=meta, body=body),
-                )
-                self._send(page)
-            else:
-                self._send("404", 404)
-        except Exception as e:
-            self._send(self.app.render_index("出错：%s" % e, ok=False))
-
-    def do_POST(self):
-        if not self._authorized():
-            self._deny()
-            return
-        u = urlparse(self.path)
-        try:
-            form = self._read_form()
-            if u.path == "/save":
-                rel = self.app.save_page(form)
-                msg = "已保存 %s；%s" % (rel, self.app._rebuild())
-                self._send(self.app.render_index(msg))
-            elif u.path == "/delete":
-                rel = (form.get("rel") or [""])[0]
-                path = self.app._safe_path(rel)
-                if path.exists():
-                    path.unlink()
-                msg = "已删除 %s；%s" % (rel, self.app._rebuild())
-                self._send(self.app.render_index(msg))
-            elif u.path == "/rebuild":
-                msg = self.app._rebuild()
-                self._send(self.app.render_index(msg, ok="失败" not in msg))
-            else:
-                self._send("404", 404)
-        except Exception as e:
-            self._send(self.app.render_index("出错：%s" % e, ok=False))
-
-
 def run(root: str | Path, port: int = 8902, token: str | None = None,
         no_auth: bool = False) -> None:
     """启动本地管理后台（仅 127.0.0.1）。
@@ -322,6 +210,118 @@ def run(root: str | Path, port: int = 8902, token: str | None = None,
     --no-auth 关闭鉴权（仅自己电脑上用）。
     """
     import secrets
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    class _Handler(BaseHTTPRequestHandler):
+        app: AdminApp = None  # type: ignore
+        token: str | None = None  # 为 None 时不鉴权
+
+        def log_message(self, *a):
+            pass
+
+        def _authorized(self) -> bool:
+            """token 鉴权：query ?token= 或 Cookie mssg_token。"""
+            if not self.token:
+                return True
+            u = urlparse(self.path)
+            q = parse_qs(u.query)
+            if (q.get("token") or [""])[0] == self.token:
+                return True
+            cookie = self.headers.get("Cookie", "")
+            for part in cookie.split(";"):
+                if part.strip() == "mssg_token=" + self.token:
+                    return True
+            return False
+
+        def _deny(self):
+            self._send(
+                "<h1>403</h1><p>需要 token：用启动时打印的完整 URL 访问。</p>", 403
+            )
+
+        def _send(self, html_text: str, code=200, set_cookie: bool = False):
+            data = html_text.encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            if set_cookie and self.token:
+                self.send_header(
+                    "Set-Cookie",
+                    "mssg_token=%s; Path=/; HttpOnly; SameSite=Lax" % self.token,
+                )
+            self.end_headers()
+            self.wfile.write(data)
+
+        def _redirect(self, to: str):
+            self.send_response(303)
+            self.send_header("Location", to)
+            self.end_headers()
+
+        def _read_form(self) -> dict:
+            n = int(self.headers.get("Content-Length", 0) or 0)
+            raw = self.rfile.read(n).decode("utf-8", "replace") if n else ""
+            return parse_qs(raw, keep_blank_values=True)
+
+        def do_GET(self):
+            if not self._authorized():
+                self._deny()
+                return
+            u = urlparse(self.path)
+            try:
+                if u.path == "/":
+                    # query 带 token 进来时种下 cookie，后续免带
+                    self._send(self.app.render_index(), set_cookie=True)
+                elif u.path == "/new":
+                    inner = self.app._form(rel="post/untitled.md").replace(
+                        '<input type="hidden" name="rel" value="post/untitled.md">',
+                        "<label>文件名（content/ 下相对路径，如 post/hello.md）</label>"
+                        '<input type="text" name="rel" value="post/untitled.md" required>',
+                    )
+                    page = LAYOUT.format(
+                        css=CSS, msg="", body="<h2>新建文章</h2>" + inner
+                    )
+                    self._send(page)
+                elif u.path == "/edit":
+                    q = parse_qs(u.query)
+                    rel = (q.get("f") or [""])[0]
+                    path = self.app._safe_path(rel)
+                    meta, body = _split_fm(path.read_text(encoding="utf-8"))
+                    page = LAYOUT.format(
+                        css=CSS, msg="",
+                        body="<h2>编辑 %s</h2>" % _esc(rel)
+                        + self.app._form(rel=rel, meta=meta, body=body),
+                    )
+                    self._send(page)
+                else:
+                    self._send("404", 404)
+            except Exception as e:
+                self._send(self.app.render_index("出错：%s" % e, ok=False))
+
+        def do_POST(self):
+            if not self._authorized():
+                self._deny()
+                return
+            u = urlparse(self.path)
+            try:
+                form = self._read_form()
+                if u.path == "/save":
+                    rel = self.app.save_page(form)
+                    msg = "已保存 %s；%s" % (rel, self.app._rebuild())
+                    self._send(self.app.render_index(msg))
+                elif u.path == "/delete":
+                    rel = (form.get("rel") or [""])[0]
+                    path = self.app._safe_path(rel)
+                    if path.exists():
+                        path.unlink()
+                    msg = "已删除 %s；%s" % (rel, self.app._rebuild())
+                    self._send(self.app.render_index(msg))
+                elif u.path == "/rebuild":
+                    msg = self.app._rebuild()
+                    self._send(self.app.render_index(msg, ok="失败" not in msg))
+                else:
+                    self._send("404", 404)
+            except Exception as e:
+                self._send(self.app.render_index("出错：%s" % e, ok=False))
+
 
     if no_auth:
         use_token = None

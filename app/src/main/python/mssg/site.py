@@ -14,7 +14,6 @@ import warnings
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
-from xml.sax.saxutils import escape as _xml_escape
 
 from . import markdown as _md
 from . import template as _tpl
@@ -22,6 +21,15 @@ from . import themes as _themes
 from . import images as _images
 from . import shortcodes as _shortcodes
 from . import assets as _assets
+
+
+def _xml_escape(data, entities=None):
+    # 与 xml.sax.saxutils.escape 同语义；本地实现以免拖入 http.client/ssl 链
+    data = data.replace("&", "&amp;").replace(">", "&gt;").replace("<", "&lt;")
+    if entities:
+        for k, v in entities.items():
+            data = data.replace(k, v)
+    return data
 from .frontmatter import split as _split_fm
 from .hooks import Hooks
 from .scaffold import new_site
