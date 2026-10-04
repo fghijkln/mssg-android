@@ -348,8 +348,8 @@ public class ApiBridge {
         }
     }
 
-    @JavascriptInterface
-    public String listPlugins() {
+    // 插件列表共享：扫 aiPluginDir 下的 manifest；full 时带 manifest 原文，否则带 actionCount
+    private String listAiPluginJson(boolean full) {
         try {
             JSONArray arr = new JSONArray();
             java.io.File dir = aiPluginDir();
@@ -367,7 +367,12 @@ public class ApiBridge {
                                     f.getName().replace(".json", "")));
                             o.put("description", j.optString("description", ""));
                             o.put("version", j.optString("version", ""));
-                            o.put("manifest", c);
+                            if (full) {
+                                o.put("manifest", c);
+                            } else {
+                                JSONArray acts = j.optJSONArray("actions");
+                                o.put("actionCount", acts != null ? acts.length() : 0);
+                            }
                             arr.put(o);
                         } catch (Exception ignored) {}
                     }
@@ -383,38 +388,12 @@ public class ApiBridge {
     }
 
     @JavascriptInterface
+    public String listPlugins() {
+        return listAiPluginJson(true);
+    }
+    @JavascriptInterface
     public String listAiPlugins() {
-        try {
-            JSONArray arr = new JSONArray();
-            java.io.File dir = aiPluginDir();
-            if (dir.isDirectory()) {
-                java.io.File[] files = dir.listFiles((d, n) -> n.endsWith(".json"));
-                if (files != null) {
-                    for (java.io.File f : files) {
-                        try {
-                            String c = new String(
-                                    java.nio.file.Files.readAllBytes(f.toPath()),
-                                    java.nio.charset.StandardCharsets.UTF_8);
-                            JSONObject j = new JSONObject(c);
-                            JSONObject o = new JSONObject();
-                            o.put("name", j.optString("name",
-                                    f.getName().replace(".json", "")));
-                            o.put("description", j.optString("description", ""));
-                            o.put("version", j.optString("version", ""));
-                            JSONArray acts = j.optJSONArray("actions");
-                            o.put("actionCount", acts != null ? acts.length() : 0);
-                            arr.put(o);
-                        } catch (Exception ignored) {}
-                    }
-                }
-            }
-            JSONObject r = new JSONObject();
-            r.put("ok", true);
-            r.put("plugins", arr);
-            return r.toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return listAiPluginJson(false);
     }
 
     @JavascriptInterface
