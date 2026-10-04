@@ -94,204 +94,123 @@ public class ApiBridge {
         return siteDir;
     }
 
-    @JavascriptInterface
-    public String listPages() {
+    // py 桥方法共享：调 Python 函数转字符串，异常转 fail JSON
+    private String pyStr(String fn, Object... args) {
         try {
-            return api().callAttr("list_pages", siteDir).toString();
+            return api().callAttr(fn, args).toString();
         } catch (Exception e) {
             return fail(e);
         }
+    }
+
+    @JavascriptInterface
+    public String listPages() {
+        return pyStr("list_pages", siteDir);
     }
 
     @JavascriptInterface
     public String getPage(String rel) {
-        try {
-            return api().callAttr("get_page", siteDir, rel).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("get_page", siteDir, rel);
     }
 
     @JavascriptInterface
-    public String savePage(String rel, String title, String date, String tags,
-                           String categories, boolean draft, String body) {
-        try {
-            return api().callAttr("save_page", siteDir, rel, title, date,
-                    tags, categories, draft, body).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+    public String savePage(String rel, String title, String date, String tags, String categories, boolean draft, String body) {
+        return pyStr("save_page", siteDir, rel, title, date, tags, categories, draft, body);
     }
 
     @JavascriptInterface
     public String deletePage(String rel) {
-        try {
-            return api().callAttr("delete_page", siteDir, rel).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("delete_page", siteDir, rel);
     }
 
     @JavascriptInterface
     public String listInstalledPlugins() {
-        try {
-            return api().callAttr("list_installed_plugins", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("list_installed_plugins", siteDir);
     }
 
     @JavascriptInterface
     public String installPluginFile(String name, String content) {
-        try {
-            return api().callAttr("install_plugin_file", siteDir, name, content).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("install_plugin_file", siteDir, name, content);
     }
 
     @JavascriptInterface
     public String deletePlugin(String name) {
-        try {
-            return api().callAttr("delete_plugin", siteDir, name).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("delete_plugin", siteDir, name);
     }
 
     @JavascriptInterface
     public String buildSite() {
-        try {
-            return api().callAttr("build_site", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("build_site", siteDir);
     }
 
     @JavascriptInterface
     public String listThemes() {
-        try {
-            return api().callAttr("list_themes").toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("list_themes");
     }
 
     @JavascriptInterface
     public String getTheme() {
-        try {
-            return api().callAttr("get_theme", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("get_theme", siteDir);
     }
 
     @JavascriptInterface
     public String setTheme(String theme) {
-        try {
-            return api().callAttr("set_theme", siteDir, theme).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("set_theme", siteDir, theme);
     }
 
     @JavascriptInterface
     public String cfStatus() {
-        try {
-            return api().callAttr("cf_status", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("cf_status", siteDir);
     }
 
     @JavascriptInterface
     public String cfConnect(String token) {
-        try {
-            return api().callAttr("cf_connect", siteDir, token).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("cf_connect", siteDir, token);
     }
 
     @JavascriptInterface
     public String cfSetAccount(String accountId) {
-        try {
-            return api().callAttr("cf_set_account", siteDir, accountId).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("cf_set_account", siteDir, accountId);
     }
 
     @JavascriptInterface
     public String cfSetProject(String name) {
-        try {
-            return api().callAttr("cf_set_project", siteDir, name).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("cf_set_project", siteDir, name);
     }
 
     @JavascriptInterface
     public String cfProjects() {
-        try {
-            return api().callAttr("cf_projects", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("cf_projects", siteDir);
     }
 
     @JavascriptInterface
     public String cfDeploy() {
-        try {
-            return api().callAttr("cf_deploy", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("cf_deploy", siteDir);
     }
 
     @JavascriptInterface
     public String cfDisconnect() {
-        try {
-            return api().callAttr("cf_disconnect", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("cf_disconnect", siteDir);
     }
 
     @JavascriptInterface
     public String exportZip() {
-        try {
-            return api().callAttr("export_zip", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("export_zip", siteDir);
     }
 
     @JavascriptInterface
     public String backupSite() {
-        try {
-            return api().callAttr("export_source_backup", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("export_source_backup", siteDir);
     }
 
     @JavascriptInterface
     public String cleanBuild() {
-        try {
-            return api().callAttr("clean_build", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("clean_build", siteDir);
     }
 
     @JavascriptInterface
     public String getBuildInfo() {
-        try {
-            return api().callAttr("get_build_info", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("get_build_info", siteDir);
     }
 
     @JavascriptInterface
@@ -303,20 +222,12 @@ public class ApiBridge {
 
     @JavascriptInterface
     public String listBuildFiles() {
-        try {
-            return api().callAttr("list_build_files", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("list_build_files", siteDir);
     }
 
     @JavascriptInterface
     public String deleteBuildFile(String rel) {
-        try {
-            return api().callAttr("delete_build_file", siteDir, rel).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("delete_build_file", siteDir, rel);
     }
 
     @JavascriptInterface
@@ -557,20 +468,12 @@ public class ApiBridge {
     /* AI 一句话建站 */
     @JavascriptInterface
     public String aiCreateSite(String specJson) {
-        try {
-            return api().callAttr("ai_create_site", parentDir(), specJson).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("ai_create_site", parentDir(), specJson);
     }
 
     @JavascriptInterface
     public String aiPromoteSite() {
-        try {
-            return api().callAttr("ai_promote_site", parentDir()).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("ai_promote_site", parentDir());
     }
 
     @JavascriptInterface
@@ -583,56 +486,32 @@ public class ApiBridge {
     /* 构建项目（多版本存档） */
     @JavascriptInterface
     public String listProjects() {
-        try {
-            return api().callAttr("list_projects", parentDir()).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("list_projects", parentDir());
     }
 
     @JavascriptInterface
     public String buildProject(String name) {
-        try {
-            return api().callAttr("build_project", siteDir, parentDir(), name).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("build_project", siteDir, parentDir(), name);
     }
 
     @JavascriptInterface
     public String listProjectFiles(String name) {
-        try {
-            return api().callAttr("list_project_files", parentDir(), name).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("list_project_files", parentDir(), name);
     }
 
     @JavascriptInterface
     public String deleteProject(String name) {
-        try {
-            return api().callAttr("delete_project", parentDir(), name).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("delete_project", parentDir(), name);
     }
 
     @JavascriptInterface
     public String deleteProjectFile(String name, String rel) {
-        try {
-            return api().callAttr("delete_project_file", parentDir(), name, rel).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("delete_project_file", parentDir(), name, rel);
     }
 
     @JavascriptInterface
     public String exportProjectZip(String name) {
-        try {
-            return api().callAttr("export_project_zip", parentDir(), name).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("export_project_zip", parentDir(), name);
     }
 
     @JavascriptInterface
@@ -961,38 +840,22 @@ public class ApiBridge {
 
     @JavascriptInterface
     public String exportPageHtml(String rel) {
-        try {
-            return api().callAttr("export_page_html", siteDir, rel).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("export_page_html", siteDir, rel);
     }
 
     @JavascriptInterface
     public String getCustomCss() {
-        try {
-            return api().callAttr("get_custom_css", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("get_custom_css", siteDir);
     }
 
     @JavascriptInterface
     public String saveCustomCss(String css) {
-        try {
-            return api().callAttr("save_custom_css", siteDir, css).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("save_custom_css", siteDir, css);
     }
 
     @JavascriptInterface
     public String clearCustomCss() {
-        try {
-            return api().callAttr("clear_custom_css", siteDir).toString();
-        } catch (Exception e) {
-            return fail(e);
-        }
+        return pyStr("clear_custom_css", siteDir);
     }
 
     /**
