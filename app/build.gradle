@@ -10,9 +10,10 @@ android {
         minSdk 24
         targetSdk 34
         // 版本号由 CI 从 git tag 自动传入（-PappVersionName/-PappVersionCode），
-        // 本地构建时回退到下面的手写值。以后发版不用再手动改这里。
-        def verCode = (project.findProperty("appVersionCode") ?: "37") as int
-        def verName = project.findProperty("appVersionName") ?: "0.27.0"
+        // 本地构建/F-Droid 构建时回退到下面的手写值。发版时记得同步改这里，
+        // 否则 F-Droid 打出的包版本号是错的。
+        def verCode = (project.findProperty("appVersionCode") ?: "90") as int
+        def verName = project.findProperty("appVersionName") ?: "0.27.6"
         versionCode verCode
         versionName verName
 
