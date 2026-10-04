@@ -343,6 +343,26 @@ public class ApiBridge {
         return BuildConfig.SELF_UPDATE_ENABLED;
     }
 
+    // async 桥方法共享：后台线程请求，异常转 error JSON，回 UI 线程执行 JS 回调
+    private void netFetch(String method, String url, String headers, String body, int timeout, boolean b64,
+                          java.util.function.Function<String, String> cb) {
+        new Thread(() -> {
+            String raw;
+            try {
+                String b = b64 ? Base64.encodeToString(body.getBytes(java.nio.charset.StandardCharsets.UTF_8), Base64.NO_WRAP) : body;
+                raw = cfFetchSync(method, url, headers, b, timeout);
+            } catch (Exception e) {
+                raw = "{\"error\":\"" + e.toString().replace("\"", "'") + "\"}";
+            }
+            final String result = raw;
+            activity.runOnUiThread(() -> {
+                try {
+                    wv.evaluateJavascript(cb.apply(result), null);
+                } catch (Exception ignored) {}
+            });
+        }).start();
+    }
+
     /**
      * 通用异步文本抓取：网络在普通后台线程跑，不占 JS 桥线程；
      * 结果通过 onFetchText(tag, jsonStr) 回调到页面。
@@ -350,21 +370,8 @@ public class ApiBridge {
      */
     @JavascriptInterface
     public void fetchText(String tag, String url) {
-        new Thread(() -> {
-            String raw;
-            try {
-                raw = cfFetchSync("GET", url, "{\"Accept\":\"*/*\"}", "", 15);
-            } catch (Exception e) {
-                raw = "{\"error\":\"" + e.toString().replace("\"", "'") + "\"}";
-            }
-            final String result = raw;
-            activity.runOnUiThread(() -> {
-                try {
-                    wv.evaluateJavascript("onFetchText(" + JSONObject.quote(tag) + ","
-                            + JSONObject.quote(result) + ")", null);
-                } catch (Exception ignored) {}
-            });
-        }).start();
+        netFetch("GET", url, "{\"Accept\":\"*/*\"}", "", 15, false,
+            result -> "onFetchText(" + JSONObject.quote(tag) + "," + JSONObject.quote(result) + ")");
     }
 
     /* AI 写作助手 */
@@ -403,24 +410,8 @@ public class ApiBridge {
     /** AI 接口 POST（OpenAI 兼容），经 WebView Chromium 网络栈，走 onFetchText(tag) 回调。 */
     @JavascriptInterface
     public void fetchPostText(String tag, String url, String headersJson, String bodyJson) {
-        new Thread(() -> {
-            String raw;
-            try {
-                String bodyB64 = Base64.encodeToString(
-                        bodyJson.getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                        Base64.NO_WRAP);
-                raw = cfFetchSync("POST", url, headersJson, bodyB64, 90);
-            } catch (Exception e) {
-                raw = "{\"error\":\"" + e.toString().replace("\"", "'") + "\"}";
-            }
-            final String result = raw;
-            activity.runOnUiThread(() -> {
-                try {
-                    wv.evaluateJavascript("onFetchText(" + JSONObject.quote(tag) + ","
-                            + JSONObject.quote(result) + ")", null);
-                } catch (Exception ignored) {}
-            });
-        }).start();
+        netFetch("POST", url, headersJson, bodyJson, 90, true,
+            result -> "onFetchText(" + JSONObject.quote(tag) + "," + JSONObject.quote(result) + ")");
     }
 
     private java.io.File aiPluginDir() {
