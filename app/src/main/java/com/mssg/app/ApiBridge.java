@@ -34,6 +34,7 @@ import java.io.OutputStream;
  * 需要 UI 的操作（分享/Toast）切回主线程。
  */
 public class ApiBridge {
+    private static final String OK_JSON = "{\"ok\":true}";
     /** 供 Python（Chaquopy）回调拿 WebView 通道 */
     public static ApiBridge instance;
 
@@ -85,6 +86,11 @@ public class ApiBridge {
         return Python.getInstance().getModule("mssg_api");
     }
 
+    // fail(new Exception(tr(...))) 快捷
+    private String failTr(String zh, String en) {
+        return fail(new Exception(tr(zh, en)));
+    }
+
     private String fail(Exception e) {
         return "{\"ok\":false,\"msg\":\"" + esc(e.toString()) + "\"}";
     }
@@ -92,6 +98,13 @@ public class ApiBridge {
     @JavascriptInterface
     public String getSiteDir() {
         return siteDir;
+    }
+
+    // 流拷贝共享：try-with-resources 内调用，IOException 由外层 try 接住
+    private static void copyStream(java.io.InputStream in, java.io.OutputStream out) throws java.io.IOException {
+        byte[] buf = new byte[8192];
+        int n;
+        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
     }
 
     // py 桥方法共享：调 Python 函数转字符串，异常转 fail JSON
@@ -213,11 +226,16 @@ public class ApiBridge {
         return pyStr("get_build_info", siteDir);
     }
 
+    // 预览页共享：启动 PreviewActivity，kv 为 key/value 对
+    private void openPreview(String... kv) {
+        Intent intent = new Intent(activity, PreviewActivity.class);
+        for (int i = 0; i + 1 < kv.length; i += 2) intent.putExtra(kv[i], kv[i + 1]);
+        activity.startActivity(intent);
+    }
+
     @JavascriptInterface
     public void previewSite() {
-        Intent intent = new Intent(activity, PreviewActivity.class);
-        intent.putExtra("siteDir", siteDir);
-        activity.startActivity(intent);
+        openPreview("siteDir", siteDir);
     }
 
     @JavascriptInterface
@@ -232,10 +250,7 @@ public class ApiBridge {
 
     @JavascriptInterface
     public void previewBuildFile(String rel) {
-        Intent intent = new Intent(activity, PreviewActivity.class);
-        intent.putExtra("siteDir", siteDir);
-        intent.putExtra("startPath", "/" + rel);
-        activity.startActivity(intent);
+        openPreview("siteDir", siteDir, "startPath", "/" + rel);
     }
 
     @JavascriptInterface
@@ -312,7 +327,7 @@ public class ApiBridge {
                     .putString("ai_key", key == null ? "" : key.trim())
                     .putString("ai_model", model == null ? "" : model.trim())
                     .apply();
-            return "{\"ok\":true}";
+            return OK_JSON;
         } catch (Exception e) {
             return fail(e);
         }
@@ -399,9 +414,9 @@ public class ApiBridge {
     @JavascriptInterface
     public String getAiPlugin(String name) {
         try {
-            if (!validAiName(name)) return fail(new Exception(tr("非法插件名", "Invalid plugin name")));
+            if (!validAiName(name)) return failTr("非法插件名", "Invalid plugin name");
             java.io.File f = new java.io.File(aiPluginDir(), name + ".json");
-            if (!f.isFile()) return fail(new Exception(tr("插件不存在", "Plugin not found")));
+            if (!f.isFile()) return failTr("插件不存在", "Plugin not found");
             String c = new String(java.nio.file.Files.readAllBytes(f.toPath()),
                     java.nio.charset.StandardCharsets.UTF_8);
             new JSONObject(c); // 校验
@@ -417,16 +432,16 @@ public class ApiBridge {
     @JavascriptInterface
     public String installAiPlugin(String name, String content) {
         try {
-            if (!validAiName(name)) return fail(new Exception(tr("非法插件名", "Invalid plugin name")));
+            if (!validAiName(name)) return failTr("非法插件名", "Invalid plugin name");
             if (content == null || content.trim().isEmpty())
-                return fail(new Exception(tr("插件文件为空", "Plugin file is empty")));
+                return failTr("插件文件为空", "Plugin file is empty");
             new JSONObject(content); // 校验
             java.io.File dir = aiPluginDir();
             dir.mkdirs();
             java.nio.file.Files.write(
                     new java.io.File(dir, name + ".json").toPath(),
                     content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            return "{\"ok\":true}";
+            return OK_JSON;
         } catch (Exception e) {
             return fail(e);
         }
@@ -435,10 +450,10 @@ public class ApiBridge {
     @JavascriptInterface
     public String deleteAiPlugin(String name) {
         try {
-            if (!validAiName(name)) return fail(new Exception(tr("非法插件名", "Invalid plugin name")));
+            if (!validAiName(name)) return failTr("非法插件名", "Invalid plugin name");
             java.io.File f = new java.io.File(aiPluginDir(), name + ".json");
             if (f.isFile()) f.delete();
-            return "{\"ok\":true}";
+            return OK_JSON;
         } catch (Exception e) {
             return fail(e);
         }
@@ -457,9 +472,7 @@ public class ApiBridge {
 
     @JavascriptInterface
     public void previewAiSite() {
-        Intent intent = new Intent(activity, PreviewActivity.class);
-        intent.putExtra("siteDir", parentDir() + "/site-ai");
-        activity.startActivity(intent);
+        openPreview("siteDir", parentDir() + "/site-ai");
     }
 
     /* 构建项目（多版本存档） */
@@ -495,9 +508,7 @@ public class ApiBridge {
 
     @JavascriptInterface
     public void previewProject(String name) {
-        Intent intent = new Intent(activity, PreviewActivity.class);
-        intent.putExtra("publicDir", parentDir() + "/projects/" + name);
-        activity.startActivity(intent);
+        openPreview("publicDir", parentDir() + "/projects/" + name);
     }
 
     private Toast lastToast;
@@ -707,9 +718,7 @@ public class ApiBridge {
                 tmp = File.createTempFile("pick", ext, activity.getCacheDir());
                 try (InputStream in = activity.getContentResolver().openInputStream(uri);
                      OutputStream out = new FileOutputStream(tmp)) {
-                    byte[] buf = new byte[8192];
-                    int n;
-                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                    copyStream(in, out);
                 }
                 String r = api().callAttr("import_bundle_image",
                         siteDir, tmp.getAbsolutePath(), rel).toString();
@@ -759,9 +768,7 @@ public class ApiBridge {
                 tmp = File.createTempFile("backup", ".zip", activity.getCacheDir());
                 try (InputStream in = activity.getContentResolver().openInputStream(uri);
                      OutputStream out = new FileOutputStream(tmp)) {
-                    byte[] buf = new byte[8192];
-                    int n;
-                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                    copyStream(in, out);
                 }
                 String r = api().callAttr("inspect_backup",
                         tmp.getAbsolutePath()).toString();
@@ -859,9 +866,7 @@ public class ApiBridge {
                 try (OutputStream out = activity.getContentResolver()
                         .openOutputStream(uri);
                      InputStream in = new FileInputStream(src)) {
-                    byte[] buf = new byte[8192];
-                    int n;
-                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                    copyStream(in, out);
                 }
                 where = tr("下载/", "Downloads/") + fileName;
             } else {
@@ -870,9 +875,7 @@ public class ApiBridge {
                 File dst = new File(dir, fileName);
                 try (InputStream in = new FileInputStream(src);
                      OutputStream out = new java.io.FileOutputStream(dst)) {
-                    byte[] buf = new byte[8192];
-                    int n;
-                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                    copyStream(in, out);
                 }
                 where = dst.getAbsolutePath();
             }
@@ -903,18 +906,14 @@ public class ApiBridge {
                     try (OutputStream out = activity.getContentResolver()
                             .openOutputStream(uri);
                          InputStream in = new FileInputStream(srcPath)) {
-                        byte[] buf = new byte[8192];
-                        int n;
-                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                        copyStream(in, out);
                     }
                 } else {
                     File dst = new File(activity.getExternalFilesDir(
                             Environment.DIRECTORY_DOWNLOADS), fileName);
                     try (InputStream in = new FileInputStream(srcPath);
                          OutputStream out = new java.io.FileOutputStream(dst)) {
-                        byte[] buf = new byte[8192];
-                        int n;
-                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                        copyStream(in, out);
                     }
                     uri = Uri.fromFile(dst);
                 }
