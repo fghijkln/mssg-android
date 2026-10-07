@@ -4,7 +4,7 @@ Describe the site you want in one sentence and the built-in AI assistant generat
 
 Features:
 * AI site builder and AI writing/coding assistants (requires your own OpenAI-compatible API key)
-* Plugin system with shortcodes
+* Plugin system with shortcodes; the built-in extension store fetches community plugins (MIT-licensed) from GitHub only when you explicitly install them
 * Markdown editor, themes, on-device site search
 * Backup/restore, Cloudflare Pages deployment
 
